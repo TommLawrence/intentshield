@@ -1,0 +1,245 @@
+// IntentShield — data model (Phase 1 foundation)
+//
+// Conventions:
+// - SQLite backend (platform constraint; model maps 1:1 to a future Postgres deploy).
+// - All monetary amounts are INTEGER MINOR UNITS (cents). No floats on money, ever.
+// - SQLite has no enums or arrays: controlled-vocab strings and JSON-string fields
+//   are used instead, validated in application code (src/lib) before persistence.
+// - Fields holding untrusted external content are marked UNTRUSTED and must never
+//   be interpreted as instructions (see SECURITY.md).
+// - Audit records are append-only by convention (no update paths in code).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ── Human identities ─────────────────────────────────────────────────────
+// Hackathon MVP: lightweight demo identities (no auth in Phase 1).
+model User {
+  id          String          @id @default(cuid())
+  email       String          @unique
+  displayName String
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  mandates    Mandate[]
+  sessions    AgentSession[]
+
+  @@index([email])
+}
+
+// ── Mandates ─────────────────────────────────────────────────────────────
+// A mandate is the human's authorization. It is versioned: every transaction
+// is evaluated against the exact MandateVersion referenced below, never against
+// "the latest" state.
+model Mandate {
+  id                    String                @id @default(cuid())
+  userId                String
+  user                  User                  @relation(fields: [userId], references: [id])
+  naturalLanguageIntent String
+  status                String                @default("ACTIVE") // DRAFT | ACTIVE | PAUSED | REVOKED | COMPLETED | EXPIRED
+  currentVersion        Int                   @default(0)
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  versions              MandateVersion[]
+  transactions          ProposedTransaction[]
+  sessions              AgentSession[]
+
+  @@index([userId, status])
+}
+
+// Immutable once written. Edits to a mandate create a new version row.
+model MandateVersion {
+  id               String   @id @default(cuid())
+  mandateId        String
+  mandate          Mandate  @relation(fields: [mandateId], references: [id])
+  version          Int
+  currency         String // ISO 4217, e.g. "USD"
+  maxTotal         Int // minor units
+  maxShipping      Int? // minor units; null = no shipping ceiling set
+  allowedCategories String? // JSON string[]; null = all allowed
+  blockedCategories String? // JSON string[]; null = none blocked
+  allowedMerchants  String? // JSON string[]; null = all allowed
+  blockedMerchants  String? // JSON string[]; null = none blocked
+  allowRecurring   Boolean  @default(false)
+  allowRefurbished Boolean  @default(false)
+  purchaseType     String   @default("ONE_TIME") // ONE_TIME | RECURRING
+  maxQuantity      Int      @default(1)
+  validFrom        DateTime
+  validUntil       DateTime
+  approvalMode     String   @default("AUTO") // AUTO | MANUAL_REVIEW
+  extractionMeta   String? // JSON: { provider, model, parsedAt } — no secrets, no raw logs
+  createdAt        DateTime @default(now())
+
+  @@unique([mandateId, version])
+  @@index([mandateId])
+}
+
+// ── Controlled product catalogue (Phase 3 seeds adversarial entries) ────
+model Product {
+  id               String   @id @default(cuid())
+  sku              String   @unique
+  name             String
+  category         String // laptops | phones | software | office-equipment | subscriptions | accessories
+  merchant         String
+  price            Int // minor units
+  currency         String
+  condition        String   @default("NEW") // NEW | REFURBISHED
+  recurring        Boolean  @default(false)
+  recurringPrice   Int? // minor units per interval, when recurring
+  recurringInterval String? // MONTH | YEAR
+  shipping         Int // minor units
+  description      String // UNTRUSTED external content — display/reason only, never authority
+  adversarial      Boolean  @default(false) // deliberately adversarial catalogue entry (demo scenarios)
+  externalMetadata String? // JSON — UNTRUSTED
+  riskFlags        String? // JSON string[] — deterministic precomputed signals (e.g. INJECTED_INSTRUCTIONS)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([category])
+  @@index([merchant])
+}
+
+// ── Agent activity ────────────────────────────────────────────────────────
+model AgentSession {
+  id           String               @id @default(cuid())
+  userId       String
+  user         User                 @relation(fields: [userId], references: [id])
+  mandateId    String?
+  mandate      Mandate?             @relation(fields: [mandateId], references: [id])
+  status       String               @default("ACTIVE") // ACTIVE | ENDED
+  startedAt    DateTime             @default(now())
+  endedAt      DateTime?
+  actions      AgentAction[]
+  transactions ProposedTransaction[]
+
+  @@index([userId])
+}
+
+model AgentAction {
+  id         String       @id @default(cuid())
+  sessionId  String
+  session    AgentSession @relation(fields: [sessionId], references: [id])
+  actionType String // SEARCH_PRODUCTS | GET_PRODUCT | BUILD_CART | PROPOSE_TRANSACTION | EVALUATE_POLICY | CREATE_ORDER | CAPTURE_ORDER
+  payload    String // JSON — sanitized input snapshot
+  result     String? // JSON — sanitized result snapshot
+  createdAt  DateTime     @default(now())
+
+  @@index([sessionId, createdAt])
+}
+
+// ── Proposed transactions (agent output — always UNTRUSTED input to policy) ─
+model ProposedTransaction {
+  id               String            @id @default(cuid())
+  mandateId        String
+  mandate          Mandate           @relation(fields: [mandateId], references: [id])
+  mandateVersion   Int
+  sessionId        String
+  session          AgentSession      @relation(fields: [sessionId], references: [id])
+  merchant         String
+  items            String // JSON line-item snapshot
+  subtotal         Int // minor units
+  shipping         Int // minor units
+  tax              Int // minor units
+  discount         Int               @default(0)
+  total            Int // minor units — the number the policy engine judges
+  currency         String
+  recurring        Boolean           @default(false)
+  condition        String // NEW | REFURBISHED | MIXED
+  quantity         Int
+  externalMetadata String? // JSON — UNTRUSTED
+  riskSignals      String? // JSON string[]
+  fingerprint      String // sha256(mandateId|merchant|items|total|currency) — duplicate detection key
+  status           String            @default("PROPOSED") // PROPOSED | EVALUATED | IN_REVIEW | BLOCKED | EXECUTING | COMPLETED | FAILED | CANCELLED
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  evaluations      PolicyEvaluation[]
+  paymentIntents   PaymentIntent[]
+
+  @@index([mandateId, mandateVersion])
+  @@index([fingerprint])
+  @@index([status])
+}
+
+// ── Policy evaluations (deterministic engine output) ─────────────────────
+model PolicyEvaluation {
+  id              String              @id @default(cuid())
+  transactionId   String
+  transaction     ProposedTransaction @relation(fields: [transactionId], references: [id])
+  mandateId       String
+  mandateVersion  Int
+  decision        String // ALLOW | REVIEW | BLOCK
+  ruleOutcomes    String // JSON: [{ code, outcome, detail? }] — every rule evaluated, always
+  reasons         String // JSON string[]
+  violations      String // JSON string[]
+  warnings        String // JSON string[]
+  policyVersion   String // engine semver, e.g. "1.0.0"
+  evaluatedAt     DateTime            @default(now())
+
+  @@index([transactionId])
+  @@index([decision])
+}
+
+// ── Payment intents (execution records) ──────────────────────────────────
+model PaymentIntent {
+  id            String              @id @default(cuid())
+  reference     String              @unique // human-readable, e.g. "IS-1042"
+  transactionId String
+  transaction   ProposedTransaction @relation(fields: [transactionId], references: [id])
+  executionId   String              @unique // idempotency key — retries can never double-execute
+  status        String              @default("PENDING") // PENDING | AWAITING_BUYER | COMPLETED | BLOCKED | FAILED | CANCELLED
+  decidedBy     String              @default("POLICY_ENGINE") // POLICY_ENGINE | USER
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  paypalOrder    PayPalOrder?
+
+  @@index([transactionId])
+  @@index([status])
+}
+
+// ── PayPal orders (server-side only; never simulated) ─────────────────────
+model PayPalOrder {
+  id              String        @id @default(cuid())
+  paymentIntentId String        @unique
+  paymentIntent   PaymentIntent @relation(fields: [paymentIntentId], references: [id])
+  paypalOrderId   String        @unique
+  status          String // CREATED | BUYER_APPROVED | CAPTURED | VOIDED | FAILED
+  captureId       String?       @unique
+  amount          Int // minor units
+  currency        String
+  environment     String        @default("SANDBOX")
+  rawSnapshot     String? // JSON — sanitized API response snapshot (ids/status only, no PII)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([paypalOrderId])
+}
+
+// ── Audit trail (append-only) ────────────────────────────────────────────
+// One correlationId ties together every event of a single end-to-end request:
+// intent → agent → policy → PayPal → outcome.
+model AuditEvent {
+  id              String   @id @default(cuid())
+  actorType       String // USER | AGENT | POLICY_ENGINE | PAYMENT_EXECUTOR | SYSTEM
+  actorId         String?
+  eventType       String // e.g. MANDATE_CREATED | POLICY_DECIDED | PAYPAL_ORDER_CREATED | PAYPAL_CAPTURED
+  correlationId   String // trace id shared across the whole chain
+  entityType      String?
+  entityId        String?
+  sessionId       String?
+  mandateId       String?
+  transactionId   String?
+  evaluationId    String?
+  paymentIntentId String?
+  paypalOrderId   String?
+  payload         String? // JSON — sanitized, no secrets
+  createdAt       DateTime @default(now())
+
+  @@index([correlationId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
