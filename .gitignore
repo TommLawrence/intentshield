@@ -50,5 +50,13 @@ test
 prompt
 
 server.log
+
+# local SQLite database files — created by `bun run setup`, never committed
+/db/*.db
+/db/*.db-journal
+
+# development-time verification artifacts (screenshots, tool output)
+/tool-results/
+
 # Skills directory
 /skills/

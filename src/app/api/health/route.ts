@@ -32,7 +32,7 @@ export async function GET() {
         configured: isPayPalConfigured(),
         environment: env.PAYPAL_ENVIRONMENT,
       },
-      ai: { provider: env.AI_PROVIDER, model: env.AI_MODEL },
+      ai: { provider: env.AI_PROVIDER, model: env.AI_MODEL ?? null },
       policyEngine: { version: POLICY_ENGINE_VERSION, rules: POLICY_RULES.length },
       timestamp: new Date().toISOString(),
     },

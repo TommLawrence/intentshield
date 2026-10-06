@@ -12,9 +12,14 @@ const envSchema = z.object({
   PAYPAL_CLIENT_SECRET: z.string().optional(),
   PAYPAL_ENVIRONMENT: z.enum(["SANDBOX", "LIVE"]).default("SANDBOX"),
   AI_PROVIDER: z.string().default("zai"),
-  // Label used for audit records and display. The zai SDK selects its model
-  // internally; this value records which model the deployment claims to use.
-  AI_MODEL: z.string().default("glm-4.6"),
+  // OpenAI-compatible local provider (AI_PROVIDER=openai). All three are
+  // required together; the provider reports missing names honestly and
+  // never starts half-configured.
+  AI_BASE_URL: z.string().optional(),
+  AI_API_KEY: z.string().optional(),
+  // Model label recorded on audit records; the zai provider falls back to
+  // its platform default when unset. Required when AI_PROVIDER=openai.
+  AI_MODEL: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

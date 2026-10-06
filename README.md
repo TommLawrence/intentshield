@@ -58,7 +58,7 @@ USER INTENT → AI AGENT → INTENTSHIELD POLICY → PAYPAL → AUDIT
 | UI | Tailwind CSS 4 + shadcn/ui (New York), custom IntentShield token system |
 | Database | Prisma ORM over SQLite (single-file dev DB — model maps 1:1 to a future Postgres deploy) |
 | Validation | Zod (environment, AI output, API contracts — `.strict()` everywhere) |
-| AI | Provider abstraction (`src/lib/ai`); default provider runs server-side via z-ai-web-dev-sdk |
+| AI | Provider abstraction (`src/lib/ai`) — two interchangeable server-side providers: `zai` (Z Cloud SDK) and `openai` (any OpenAI-compatible HTTP endpoint) |
 | Payments | PayPal **Orders v2 REST API**, server-side only (OAuth client-credentials, `PayPal-Request-Id` idempotency) |
 | Runtime | Node 24 / Bun |
 
@@ -66,16 +66,25 @@ USER INTENT → AI AGENT → INTENTSHIELD POLICY → PAYPAL → AUDIT
 
 ## Quickstart
 
+> **Running it on your own machine?** Follow **[LOCAL_SETUP.md](LOCAL_SETUP.md)** — the
+> exact step-by-step guide (local AI provider via Ollama/OpenAI/OpenRouter, PayPal
+> Sandbox wiring, database init, and the full golden path). No Z Cloud platform
+> services are required.
+
+The short version:
+
 ```bash
 bun install
 
 # environment
 cp .env.example .env
-# → add your PayPal sandbox credentials to enable guarded execution
-#   (without them the PayPal layer stays honestly "not configured")
+# → set AI_PROVIDER=openai + AI_BASE_URL/AI_API_KEY/AI_MODEL for a local
+#   OpenAI-compatible model (see LOCAL_SETUP.md); add your PayPal sandbox
+#   credentials to enable guarded execution (without them the PayPal layer
+#   stays honestly "not configured")
 
 # database (creates db/custom.db from prisma/schema.prisma)
-bun run db:push
+bun run setup
 
 bun run dev        # http://localhost:3000
 ```
@@ -88,12 +97,14 @@ no manual seed step.
 
 | Variable | Required | Purpose |
 |---|---|---|
-| `DATABASE_URL` | yes | SQLite file path (Prisma) |
+| `DATABASE_URL` | yes | SQLite file path (Prisma, resolved relative to `prisma/`) |
 | `PAYPAL_CLIENT_ID` | for execution | Server-side PayPal REST credential |
 | `PAYPAL_CLIENT_SECRET` | for execution | Server-side PayPal REST secret — **never exposed to the browser** |
 | `PAYPAL_ENVIRONMENT` | no (`SANDBOX`) | `SANDBOX` or `LIVE` (prototype targets sandbox only) |
-| `AI_PROVIDER` | no (`zai`) | Intent-extraction provider selector |
-| `AI_MODEL` | no (`glm-4.6`) | Model label recorded on audit records |
+| `AI_PROVIDER` | no (`zai`) | `zai` (Z Cloud SDK) or `openai` (any OpenAI-compatible endpoint) |
+| `AI_BASE_URL` | for `openai` | Endpoint base including the version segment, e.g. `http://localhost:11434/v1` |
+| `AI_API_KEY` | for `openai` | Bearer key for the endpoint (any non-empty value for local servers) |
+| `AI_MODEL` | for `openai` | Model name the endpoint expects, e.g. `llama3.1` (audit label for `zai`) |
 
 ### PayPal execution
 

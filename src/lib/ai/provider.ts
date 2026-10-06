@@ -9,6 +9,7 @@
  */
 
 import { ZaiProvider } from "@/lib/ai/providers/zai";
+import { OpenAICompatibleProvider } from "@/lib/ai/providers/openai";
 import { AIExtractionError, type MandateDraft } from "@/lib/ai/schemas";
 import { getEnv } from "@/lib/env";
 
@@ -59,7 +60,7 @@ export interface AIProvider {
 
 export class UnknownAIProviderError extends Error {
   constructor(provider: string) {
-    super(`Unknown AI provider "${provider}". Set AI_PROVIDER to a supported value (currently: "zai").`);
+    super(`Unknown AI provider "${provider}". Set AI_PROVIDER to "openai" (local, OpenAI-compatible) or "zai" (Z Cloud platform).`);
     this.name = "UnknownAIProviderError";
   }
 }
@@ -69,6 +70,8 @@ export function getAIProvider(): AIProvider {
   switch (env.AI_PROVIDER) {
     case "zai":
       return new ZaiProvider();
+    case "openai":
+      return new OpenAICompatibleProvider();
     default:
       throw new UnknownAIProviderError(env.AI_PROVIDER);
   }
@@ -76,3 +79,4 @@ export function getAIProvider(): AIProvider {
 
 export { AIExtractionError };
 export type { MandateDraft };
+export { AIProviderConfigError } from "@/lib/ai/providers/openai";
