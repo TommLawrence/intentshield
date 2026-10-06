@@ -274,3 +274,24 @@ Work Log:
 
 Stage Summary:
 - Documentation now matches the built system, with honest not-verified items explicitly listed. Final implementation report delivered in chat per checkpoint format.
+
+---
+Task ID: 15
+Agent: main (Z.ai Code)
+Task: Local portability checkpoint + push to GitHub (TommLawrence/intentshield)
+
+Work Log:
+- Inspected all Z Cloud assumptions: z-ai-web-dev-sdk default provider, absolute DATABASE_URL, .env/db/custom.db/tool-results/junk-file tracked in git, `.env*` gitignore hiding .env.example from clones.
+- NEW src/lib/ai/providers/shared.ts: prompts (EXTRACTION/SEARCH), parseJsonBlock, validateMandateDraft, validateProductSearchResult, buildSearchUserContent — mandate logic defined ONCE; both providers consume it.
+- Refactored zai.ts to consume shared.ts (behavior identical; ZAI_DEFAULT_MODEL_LABEL fallback). NEW openai.ts: OpenAICompatibleProvider via AI_BASE_URL/AI_API_KEY/AI_MODEL, minimal chat.completions body (model+messages), typed transport errors matching zai instanceof semantics, AIProviderConfigError listing missing var NAMES only.
+- provider.ts factory: "zai" | "openai" (+ UnknownAIProviderError updated). env.ts: AI_BASE_URL/AI_API_KEY optional, AI_MODEL now optional (zai falls back to glm-4.6 label; openai requires all three — honest fail-fast). health route: model ?? null.
+- package.json: + setup (prisma generate && db push), typecheck (tsc --noEmit), postinstall (prisma generate). .env.example: full local set with placeholders + provider guidance. NEW LOCAL_SETUP.md: 8-step guide + troubleshooting. README: LOCAL_SETUP pointer + env table rows for AI_BASE_URL/AI_API_KEY/AI_MODEL.
+- .gitignore: !.env.example negation (CRITICAL FIX — .env.example was never tracked before; fresh clones would miss it), /db/*.db, /tool-results/; untracked .env, db/custom.db (added db/.gitkeep), tool-results/, removed junk "--full-page".
+- FIXED during typecheck: TS narrowing in openai constructor (guard + array-filter for missing vars).
+- FRESH-CLONE VERIFICATION (simulated user machine, env -u DATABASE_URL since the sandbox exports DATABASE_URL): clone → bun install (827 pkgs, postinstall auto-generates prisma client) → cp .env.example .env (AI_PROVIDER=openai → mock OpenAI-compatible server on 127.0.0.1:4599) → bun run setup (relative "file:../db/custom.db" creates db/custom.db in the clone, CLI-resolved) → next dev -p 3100 boots: /api/health ok (db connected, ai.provider=openai), page 200, POST draft → extraction through mock (code-fence-wrapped JSON parsed, schema wall passed, provider=openai), confirm → ACTIVE, agent search → LAP-001 → ALLOW 88492, execute → honest 409 PAYPAL_NOT_CONFIGURED, ledger populated, dev log zero errors. Mock log confirms both system prompts + Bearer auth + model echo.
+- Live platform verification: zai provider still works post-refactor (curl draft: correct $850/laptops extraction; UI: laptop example → INTERPRETATION COMPLETE). Health unchanged (zai/glm-4.6). lint clean; typecheck clean in src/ (pre-existing examples/skills scaffolding errors untouched).
+- GIT: merged remote-main (user's README license-section website-link commits) into local — auto-merge clean, both edit-sets preserved. Pushed main → github.com/TommLawrence/intentshield (PAT via one-time URL; origin configured token-free; token never written to any file or .git/config).
+
+Stage Summary:
+- Portability checkpoint COMPLETE: app boots and runs the full chain locally with zero Z Cloud services when AI_PROVIDER=openai; ZaiProvider preserved for the platform; SQLite unchanged; no new dependencies; PayPal layer still fails honestly without credentials; Phases 3–7 behavior untouched.
+- Pushed as f345418 (merge) on main. Note: pre-existing remote history commits (before this push) still contain the platform .env (paths only, no secrets) and dev db file — current HEAD is clean.
