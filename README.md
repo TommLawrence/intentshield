@@ -136,4 +136,4 @@ See [SECURITY.md](SECURITY.md) — trust boundaries, untrusted-content handling 
 
 ## License
 
-[MIT](LICENSE) — © 2026 T L'ence (Crane Systems)[https://crane-systems.vercel.app/]
+[MIT](LICENSE) — © 2026 T L'ence [Crane Systems](https://crane-systems.vercel.app/)
