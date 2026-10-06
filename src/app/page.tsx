@@ -1,5 +1,6 @@
 import { ChainRail } from "@/components/intentshield/chain-rail";
 import { Hero } from "@/components/intentshield/hero";
+import { MandateConsole } from "@/components/intentshield/mandates/console";
 import { Roadmap } from "@/components/intentshield/roadmap";
 import { RuleCatalog } from "@/components/intentshield/rule-catalog";
 import { SiteFooter } from "@/components/intentshield/site-footer";
@@ -13,6 +14,7 @@ export default function Home() {
       <SiteHeader />
       <main className="flex-1">
         <Hero />
+        <MandateConsole />
         <ChainRail />
         <TrustBoundary />
         <RuleCatalog />

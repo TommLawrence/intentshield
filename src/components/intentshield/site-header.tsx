@@ -19,6 +19,7 @@ import { ThemeToggle } from "@/components/intentshield/theme-toggle";
 
 const NAV_LINKS = [
   { label: "OVERVIEW", href: "#overview" },
+  { label: "MANDATES", href: "#mandates" },
   { label: "POLICY CHAIN", href: "#chain" },
   { label: "TRUST BOUNDARY", href: "#trust" },
   { label: "RULES", href: "#rules" },

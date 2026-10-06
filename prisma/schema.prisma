@@ -41,8 +41,13 @@ model Mandate {
   userId                String
   user                  User                  @relation(fields: [userId], references: [id])
   naturalLanguageIntent String
-  status                String                @default("ACTIVE") // DRAFT | ACTIVE | PAUSED | REVOKED | COMPLETED | EXPIRED
-  currentVersion        Int                   @default(0)
+  status                String                @default("DRAFT") // DRAFT | ACTIVE | PAUSED | REVOKED | COMPLETED | EXPIRED
+  currentVersion        Int                   @default(0) // 0 = still a draft, no authorization exists yet
+  // Phase 2: the AI's interpretation for a DRAFT mandate — NON-AUTHORITATIVE.
+  // JSON: { draft fields (minor units), missingFields, clarificationQuestion, meta }.
+  // Never used for evaluation; only for human review. Cleared semantics: kept for
+  // the "what the AI interpreted vs what the human confirmed" trust story.
+  draftData             String?
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
   versions              MandateVersion[]

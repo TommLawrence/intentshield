@@ -101,11 +101,10 @@ export function Hero() {
 
         <Reveal delay={160}>
           <a
-            href="#roadmap"
+            href="#mandates"
             className="mt-9 inline-block font-data text-[11px] uppercase tracking-[0.14em] text-muted-foreground underline decoration-border underline-offset-4 transition-colors hover:text-primary hover:decoration-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            PHASE 1 FOUNDATION · MANDATES, AGENT &amp; PAYPAL EXECUTION ARRIVE IN
-            THE NEXT BUILD PHASES
+            PHASE 2 · MANDATE CONSOLE LIVE — TURN INTENT INTO AUTHORIZATION →
           </a>
         </Reveal>
       </div>

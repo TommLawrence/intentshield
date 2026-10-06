@@ -29,15 +29,15 @@ const PHASES: Phase[] = [
     id: "phase-2",
     label: "PHASE 2",
     title: "INTENT & MANDATES",
-    sub: "Natural-language mandate → validated structured policy",
-    status: "NEXT",
+    sub: "Mandate console: intent extraction, human confirmation, versioning, revocation",
+    status: "COMPLETE",
   },
   {
     id: "phase-3",
     label: "PHASE 3",
     title: "AGENT & CATALOGUE",
     sub: "Controlled product catalogue, agent sessions, proposals",
-    status: "PLANNED",
+    status: "NEXT",
   },
   {
     id: "phase-4",
