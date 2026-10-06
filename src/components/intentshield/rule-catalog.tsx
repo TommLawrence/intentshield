@@ -13,100 +13,18 @@ import {
   type Decision,
 } from "@/components/intentshield/primitives";
 import { Reveal } from "@/components/intentshield/reveal";
+import { POLICY_RULES as ENGINE_RULES } from "@/lib/policy/types";
 
-interface PolicyRule {
-  code: string;
-  name: string;
-  description: string;
-  outcome: Decision;
-}
+/** The engine's rule catalog is the single source of truth — the UI never
+ *  maintains its own copy. R-15/R-16 were appended in engine v1.1.0. */
+const POLICY_RULES = ENGINE_RULES.map((rule) => ({
+  code: rule.code as string,
+  name: rule.name,
+  description: rule.description,
+  outcome: rule.outcomeOnViolation,
+}));
 
-const POLICY_RULES: PolicyRule[] = [
-  {
-    code: "R-01",
-    name: "Amount ceiling",
-    description: "Total exceeds the mandate maximum",
-    outcome: "BLOCK",
-  },
-  {
-    code: "R-02",
-    name: "Shipping ceiling",
-    description: "Shipping exceeds the mandate maximum",
-    outcome: "BLOCK",
-  },
-  {
-    code: "R-03",
-    name: "Currency mismatch",
-    description: "Currency differs from the mandate currency",
-    outcome: "BLOCK",
-  },
-  {
-    code: "R-04",
-    name: "Recurring charge",
-    description: "Subscription/recurring charge where the mandate forbids it",
-    outcome: "BLOCK",
-  },
-  {
-    code: "R-05",
-    name: "Condition violation",
-    description: "Refurbished item where the mandate requires new",
-    outcome: "BLOCK",
-  },
-  {
-    code: "R-06",
-    name: "Category restriction",
-    description: "Category outside allowed list or on blocked list",
-    outcome: "BLOCK",
-  },
-  {
-    code: "R-07",
-    name: "Merchant restriction",
-    description: "Merchant outside allowed list or on blocked list",
-    outcome: "BLOCK",
-  },
-  {
-    code: "R-08",
-    name: "Quantity limit",
-    description: "Quantity exceeds mandate maximum",
-    outcome: "BLOCK",
-  },
-  {
-    code: "R-09",
-    name: "Mandate expired",
-    description: "Mandate validity window has elapsed",
-    outcome: "BLOCK",
-  },
-  {
-    code: "R-10",
-    name: "Mandate not yet valid",
-    description: "Before the mandate validity window",
-    outcome: "BLOCK",
-  },
-  {
-    code: "R-11",
-    name: "Missing field",
-    description: "Critical transaction field absent or malformed",
-    outcome: "BLOCK",
-  },
-  {
-    code: "R-12",
-    name: "Duplicate execution",
-    description: "Same transaction already executed (idempotency)",
-    outcome: "BLOCK",
-  },
-  {
-    code: "R-13",
-    name: "Untrusted metadata",
-    description: "Suspicious external signals (e.g. injected instructions)",
-    outcome: "REVIEW",
-  },
-  {
-    code: "R-14",
-    name: "Structural inconsistency",
-    description: "Transaction shape inconsistent with the mandate",
-    outcome: "BLOCK",
-  },
-];
+
 
 export function RuleCatalog() {
   return (
@@ -115,8 +33,8 @@ export function RuleCatalog() {
         <Reveal>
           <SectionHeading
             id="rules-title"
-            eyebrow="03 / POLICY RULES"
-            title="Fourteen deterministic rules"
+            eyebrow="07 / POLICY RULES"
+            title="Sixteen deterministic rules"
             description="The engine has zero LLM dependency. Every decision carries explicit, machine-readable reasons."
           />
         </Reveal>

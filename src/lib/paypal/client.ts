@@ -110,6 +110,10 @@ async function raiseApiError(res: Response, operation: string): Promise<never> {
  * Create an Orders v2 order with intent=CAPTURE.
  * `executionId` is the application-level idempotency key: it is stored on our
  * PaymentIntent (unique) and replayed as PayPal-Request-Id on retries.
+ *
+ * When `items` are supplied the order carries a full purchase unit breakdown
+ * (item_total + shipping + tax_total = value) so the PayPal receipt shows the
+ * same line items the policy engine judged.
  */
 export async function createOrder(input: {
   executionId: string;
@@ -118,8 +122,69 @@ export async function createOrder(input: {
   description: string;
   returnUrl: string;
   cancelUrl: string;
+  reference?: string;
+  invoiceId?: string;
+  items?: {
+    name: string;
+    quantity: number;
+    unitAmountMinor: number;
+    category?: "PHYSICAL_GOODS" | "DIGITAL_GOODS";
+  }[];
+  shippingMinor?: number;
+  taxMinor?: number;
+  discountMinor?: number;
 }): Promise<PayPalOrderResult> {
   const token = await getAccessToken();
+
+  const hasBreakdown = (input.items?.length ?? 0) > 0;
+  const itemTotalMinor =
+    input.items?.reduce((sum, i) => sum + i.unitAmountMinor * i.quantity, 0) ?? input.amountMinor;
+  const shipping = input.shippingMinor ?? 0;
+  const tax = input.taxMinor ?? 0;
+  const discount = input.discountMinor ?? 0;
+  // The breakdown MUST reconcile to the value — when callers pass items, they
+  // must already sum to amountMinor (the policy engine verified exactly that).
+  const breakdownTotal = itemTotalMinor + shipping + tax - discount;
+
+  const purchaseUnit: Record<string, unknown> = {
+    reference_id: input.executionId,
+    description: input.description.slice(0, 127),
+    amount: hasBreakdown
+      ? {
+          currency_code: input.currency,
+          value: toPayPalAmount(input.amountMinor),
+          breakdown: {
+            item_total: { currency_code: input.currency, value: toPayPalAmount(itemTotalMinor) },
+            shipping: { currency_code: input.currency, value: toPayPalAmount(shipping) },
+            tax_total: { currency_code: input.currency, value: toPayPalAmount(tax) },
+            ...(discount > 0
+              ? { discount: { currency_code: input.currency, value: toPayPalAmount(discount) } }
+              : {}),
+          },
+        }
+      : {
+          currency_code: input.currency,
+          value: toPayPalAmount(input.amountMinor),
+        },
+  };
+  if (input.invoiceId) purchaseUnit.invoice_id = input.invoiceId;
+  if (hasBreakdown) {
+    purchaseUnit.items = input.items!.slice(0, 50).map((i) => ({
+      name: i.name.slice(0, 127),
+      quantity: String(i.quantity),
+      unit_amount: { currency_code: input.currency, value: toPayPalAmount(i.unitAmountMinor) },
+      category: i.category ?? "PHYSICAL_GOODS",
+    }));
+  }
+  if (breakdownTotal !== input.amountMinor && hasBreakdown) {
+    // Never send PayPal an inconsistent breakdown — fail loud, fail safe.
+    throw new PayPalApiError(
+      `Order breakdown (${toPayPalAmount(breakdownTotal)}) does not reconcile with the authorized total (${toPayPalAmount(input.amountMinor)})`,
+      0,
+      null
+    );
+  }
+
   const res = await fetch(`${baseUrl()}/v2/checkout/orders`, {
     method: "POST",
     headers: {
@@ -129,16 +194,7 @@ export async function createOrder(input: {
     },
     body: JSON.stringify({
       intent: "CAPTURE",
-      purchase_units: [
-        {
-          reference_id: input.executionId,
-          description: input.description.slice(0, 127),
-          amount: {
-            currency_code: input.currency,
-            value: toPayPalAmount(input.amountMinor),
-          },
-        },
-      ],
+      purchase_units: [purchaseUnit],
       payment_source: {
         paypal: {
           experience_context: {

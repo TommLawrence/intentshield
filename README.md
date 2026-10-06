@@ -4,7 +4,14 @@
 
 A trust and policy firewall for AI-powered PayPal transactions. Built for the PayPal AI Hackathon 2026 — *Build What's Next with PayPal and AI*.
 
-> **Status: Phase 1 — Foundation.** Architecture, data model, policy contracts, PayPal/AI service abstractions and the application shell are in place. Mandates, the agent, the policy engine runtime and PayPal execution land in the next phases (see [Roadmap](#roadmap)). No PayPal response is ever simulated: without sandbox credentials the execution layer reports an honest, explicit "not configured" state.
+> **Status: working end-to-end prototype.** The full chain is implemented and verified:
+> natural-language mandate → AI interpretation → strict schema validation → human confirmation →
+> versioned authorization → AI agent search/proposal → deterministic policy evaluation →
+> ALLOW / REVIEW / BLOCK → guarded executor → PayPal Sandbox buyer approval → capture →
+> complete Payment Intent Record + audit trail. The one leg not exercised end-to-end in this
+> environment is the live PayPal sandbox call itself (no credentials present — see
+> [PayPal execution](#paypal-execution)). No PayPal response is ever simulated: without
+> sandbox credentials the execution layer reports an honest, explicit "not configured" state.
 
 ---
 
@@ -27,17 +34,21 @@ USER INTENT → AI AGENT → INTENTSHIELD POLICY → PAYPAL → AUDIT
 **AI interprets. Policy decides. PayPal executes.**
 
 1. A user states a natural-language spending mandate ("Buy a business laptop, max $900 total, new only, no subscriptions, shipping under $40").
-2. The LLM extracts it into structured constraints — schema-validated, never trusted blindly.
-3. The AI agent searches the controlled catalogue and **proposes** a transaction.
-4. A **deterministic policy engine** (zero LLM dependency) evaluates the proposal against the mandate: `ALLOW`, `REVIEW` or `BLOCK` — with explicit, machine-readable reasons.
-5. Only an authorized transaction reaches PayPal (server-side, sandbox).
-6. Every step is written to an append-only audit trail with one correlation ID from intent to capture.
+2. The LLM extracts it into structured constraints — schema-validated, never trusted blindly. **A human confirms; an immutable version 1 is created.**
+3. The AI agent searches the controlled catalogue and **proposes by SKU only** — prices are recomputed from authoritative database rows, never from the model.
+4. A **deterministic policy engine** (zero LLM dependency, 16 rules) evaluates the proposal against the mandate: `ALLOW`, `REVIEW` or `BLOCK` — with explicit, machine-readable reasons for every rule, every time.
+5. Only an authorized transaction reaches PayPal (server-side, sandbox) — through a **guarded executor** that re-evaluates policy at execution time and is idempotent by construction.
+6. Every step is written to an append-only audit trail with one correlation ID from intent to capture, surfaced as a human-readable **Payment Intent Record**.
 
-**BLOCK means BLOCK.** A blocked transaction never reaches PayPal capture — the guarded executor has no code path that executes it. See [ARCHITECTURE.md](ARCHITECTURE.md) and [SECURITY.md](SECURITY.md).
+**BLOCK means BLOCK.** A blocked transaction never reaches PayPal capture — the guarded executor has no code path that executes it. The **Adversarial Lab** on the page proves it live with ten scripted attacks (over-budget, smuggled subscriptions, currency games, expired mandates, duplicate/retry double-charges, missing fields, merchant prompt injection…).
 
-## Why it matters
+## Try the demo (3 minutes)
 
-Agentic commerce is coming. The industry question is not whether AI agents will transact — it is who decides what they may spend. IntentShield demonstrates the answer a PayPal engineer could defend: **the agent gets capabilities, not unlimited authority. Human intent becomes explicit constraints. Evaluation is deterministic. Only authorized transactions reach PayPal. Everything is auditable.**
+1. **Create a mandate** (section *01 · MANDATE CONSOLE*): type or pick an example instruction → **EXTRACT MANDATE** → review the AI's interpretation vs your words → correct anything → **CONFIRM**. Your mandate is now an immutable, versioned authorization.
+2. **Run the agent** (section *02 · AGENT & EXECUTION*): pick your ACTIVE mandate, describe what you want → **RUN AGENT SEARCH**. The AI proposes a product; deterministic code composes the transaction; the policy engine renders its 16-rule verdict.
+3. **Watch the gates work**: from *03 · ADVERSARIAL LAB*, run any scenario (try *H — Duplicate* and *J — Merchant prompt injection*). Every outcome is real, auditable, and lands in the ledger.
+4. **Audit everything** (section *04 · ACTIVITY LEDGER*): filter by decision, open any row for the full Payment Intent Record — intent, mandate, proposal, rule-by-rule evaluation, PayPal status, timeline, audit trail.
+5. **Execute** (needs sandbox credentials — below): an ALLOW (or human-approved REVIEW) transaction offers **EXECUTE VIA PAYPAL SANDBOX** → approve as the sandbox buyer → the capture completes on return and the record turns **CAPTURED**.
 
 ## Tech stack
 
@@ -46,12 +57,12 @@ Agentic commerce is coming. The industry question is not whether AI agents will 
 | Framework | Next.js 16 (App Router) + React 19 + TypeScript |
 | UI | Tailwind CSS 4 + shadcn/ui (New York), custom IntentShield token system |
 | Database | Prisma ORM over SQLite (single-file dev DB — model maps 1:1 to a future Postgres deploy) |
-| Validation | Zod (environment, AI output, API contracts) |
+| Validation | Zod (environment, AI output, API contracts — `.strict()` everywhere) |
 | AI | Provider abstraction (`src/lib/ai`); default provider runs server-side via z-ai-web-dev-sdk |
 | Payments | PayPal **Orders v2 REST API**, server-side only (OAuth client-credentials, `PayPal-Request-Id` idempotency) |
 | Runtime | Node 24 / Bun |
 
-> Platform note: this prototype was scaffolded in a constrained sandbox environment — hence SQLite + a single-route application shell. Both choices are deliberate and documented in [ARCHITECTURE.md § Platform adaptations](ARCHITECTURE.md#13-platform-adaptations).
+> Platform note: this prototype was scaffolded in a constrained sandbox environment — hence SQLite + a single-route application shell. Both choices are deliberate and documented in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Quickstart
 
@@ -60,14 +71,18 @@ bun install
 
 # environment
 cp .env.example .env
-# → add your PayPal sandbox credentials (optional; without them the
-#   PayPal layer stays honestly "not configured")
+# → add your PayPal sandbox credentials to enable guarded execution
+#   (without them the PayPal layer stays honestly "not configured")
 
 # database (creates db/custom.db from prisma/schema.prisma)
 bun run db:push
 
 bun run dev        # http://localhost:3000
 ```
+
+The product catalogue (16 products, incl. 7 deliberately adversarial listings) and the
+adversarial-lab fixture mandates are **seeded automatically and idempotently** on first use —
+no manual seed step.
 
 ### Environment variables
 
@@ -80,30 +95,70 @@ bun run dev        # http://localhost:3000
 | `AI_PROVIDER` | no (`zai`) | Intent-extraction provider selector |
 | `AI_MODEL` | no (`glm-4.6`) | Model label recorded on audit records |
 
-### PayPal sandbox setup
+### PayPal execution
+
+The guarded executor implements the full Orders v2 flow: order creation with a complete
+purchase-unit breakdown (items, shipping, tax — reconciled before the call), the payer-approval
+link, return-URL handling (`/?intent=…`), order-state verification via `getOrder` before capture,
+and idempotent capture (`PayPal-Request-Id = capture_<executionId>`).
+
+**To enable it** (everything else already works without it):
 
 1. Create a developer account at [developer.paypal.com](https://developer.paypal.com).
 2. Dashboard → *Apps & Credentials* → **Sandbox** → create a REST app.
-3. Copy Client ID / Secret into `.env`.
+3. Copy Client ID / Secret into `.env`, restart the dev server.
 4. Use the sandbox **buyer** account (Dashboard → *Testing Tools* → Sandbox accounts) to approve orders during the demo.
+
+Without credentials the execute endpoint returns `409 PAYPAL_NOT_CONFIGURED` with setup
+instructions, records a `PAYPAL_NOT_CONFIGURED` audit event, and creates **nothing** — the
+prototype never fakes a PayPal result.
+
+## The policy engine (16 rules, deterministic)
+
+| Code | Rule | On violation |
+|---|---|---|
+| R-01 | Amount ceiling | BLOCK |
+| R-02 | Shipping ceiling | BLOCK |
+| R-03 | Currency mismatch | BLOCK |
+| R-04 | Recurring charge | BLOCK |
+| R-05 | Condition (refurbished) | BLOCK |
+| R-06 | Category restriction | BLOCK |
+| R-07 | Merchant restriction | BLOCK |
+| R-08 | Quantity limit | BLOCK |
+| R-09 | Mandate expired | BLOCK |
+| R-10 | Mandate not yet valid | BLOCK |
+| R-11 | Missing critical field | BLOCK |
+| R-12 | Duplicate execution (idempotency) | BLOCK |
+| R-13 | Untrusted external metadata (injection signals) | REVIEW |
+| R-14 | Structural inconsistency | BLOCK |
+| R-15 | Mandate approval mode (MANUAL_REVIEW) | REVIEW |
+| R-16 | Mandate not ACTIVE | BLOCK |
+
+Same inputs → same decision, always: no LLM, no network, no clock reads inside the engine
+(time arrives via an explicit context). Every rule runs on every evaluation; a PASS is
+recorded, never implied. The rule catalog in `src/lib/policy/types.ts` is the single source
+consumed by both the engine and the UI.
 
 ## Repository layout
 
 ```
-prisma/schema.prisma        Data model: mandates, versions, catalogue, agent
-                           activity, transactions, evaluations, payment
-                           intents, PayPal orders, audit events
+prisma/schema.prisma        Data model: mandates + versions, catalogue, agent
+                           sessions/actions, transactions, policy evaluations,
+                           payment intents, PayPal orders, append-only audit
 src/app/                    Single-route application shell (this platform
                            exposes only `/`) + API route handlers
-src/app/api/health/         Honest system-status endpoint (no secrets)
-src/components/intentshield/ UI foundation components
-src/lib/env.ts              Zod-validated environment (fail-fast, safe errors)
-src/lib/money.ts            Minor-unit money helpers — no floats on money
-src/lib/correlation.ts     Correlation / execution IDs, fingerprints
-src/lib/policy/types.ts     Policy domain contracts + the 14-rule catalog
+src/app/api/               health · mandates · products · agent/search ·
+                           transactions (+review/execute/capture) · lab
+src/components/intentshield/ Control-room UI: mandate console, agent &
+                           execution, adversarial lab, activity ledger +
+                           Payment Intent Record dialog
+src/lib/policy/             Rule catalog + the deterministic engine
+src/lib/agent/              Search service + pure transaction composition
+src/lib/transactions/       PIR, review gate, guarded executor, capture
+src/lib/catalog/            Seed data + deterministic risk-signal scanner
 src/lib/paypal/client.ts    Orders v2 server client (never simulated)
 src/lib/ai/                 Provider abstraction + zai implementation
-ARCHITECTURE.md             Full architecture (Phase 0 deliverable)
+ARCHITECTURE.md             Full architecture
 SECURITY.md                 Trust boundaries & threat model
 ```
 
@@ -112,27 +167,29 @@ SECURITY.md                 Trust boundaries & threat model
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | Architecture | ✅ complete |
-| 1 | Foundation (this scaffold) | ✅ complete |
-| 2 | Intent & mandates — NL → validated structured policy | next |
-| 3 | Agent & controlled catalogue (incl. adversarial entries) | planned |
-| 4 | Policy engine runtime (deterministic ALLOW/REVIEW/BLOCK) | planned |
-| 5 | PayPal execution (Orders v2, buyer approval, capture, idempotency) | planned |
-| 6 | Auditability (payment intent records, activity ledger, correlation view) | planned |
-| 7 | Adversarial test lab (10 scripted scenarios) | planned |
-| 8 | Hardening (security, a11y, error-state review) | planned |
-| 9 | Demo & submission (hosted demo, video, docs) | planned |
+| 1 | Foundation | ✅ complete |
+| 2 | Intent & mandates — NL → validated structured policy | ✅ complete |
+| 3 | Agent & controlled catalogue (incl. adversarial entries) | ✅ complete |
+| 4 | Policy engine runtime (deterministic ALLOW/REVIEW/BLOCK) | ✅ complete |
+| 5 | PayPal execution (Orders v2, idempotency, honest gating) | ✅ implemented — live sandbox call awaits credentials |
+| 6 | Auditability (payment intent records, activity ledger, correlation view) | ✅ complete |
+| 7 | Adversarial test lab (10 scripted scenarios, live pipeline) | ✅ complete |
+| 8 | Hardening (security, a11y, error-state review) | in progress (this repository) |
+| 9 | Demo & submission (hosted demo, video, final docs) | next |
 
 ## Limitations (honest ones)
 
 - **Sandbox only.** No real-money path exists or is claimed. Not production-ready; no PCI compliance is claimed.
+- **The live PayPal sandbox leg was not exercised in this environment** (no credentials available). Everything up to the PayPal HTTP call — policy, gates, idempotency, breakdown construction, return-URL handling, capture preconditions — is implemented and the not-configured path is the verified default. Adding credentials is the only step needed to run the live leg.
 - **Auth is intentionally lightweight** for the hackathon MVP (demo identity); authorization *boundaries* inside the system (USER / AGENT / POLICY_ENGINE / PAYMENT_EXECUTOR / SYSTEM) are enforced structurally — see SECURITY.md.
-- **No webhooks yet** — deliberately deferred (§23 of the build plan) until a stable HTTPS endpoint exists.
-- **Tests are not in this scaffold** — the hosting platform doesn't run test suites; unit/integration tests land in the follow-up Codex phase against the contracts defined here.
+- **No webhooks yet** — deliberately deferred until a stable HTTPS endpoint exists; capture state is verified synchronously against PayPal instead.
+- **Tests are not bundled** — the hosting platform doesn't run test suites; the Adversarial Lab serves as the live, in-app scenario suite (ten attacks through the real pipeline), and unit/integration tests land in the follow-up Codex phase against the contracts defined here.
+- Tax is a flat 8% of subtotal (integer minor units) — a documented demo simplification.
 - Money assumes 2-decimal currencies (USD/EUR). Zero-decimal currencies are out of MVP scope.
 
 ## Security
 
-See [SECURITY.md](SECURITY.md) — trust boundaries, untrusted-content handling (prompt-injection defence), secrets policy, idempotency and audit design.
+See [SECURITY.md](SECURITY.md) — trust boundaries, untrusted-content handling (prompt-injection defence in depth), secrets policy, idempotency and audit design.
 
 ## License
 

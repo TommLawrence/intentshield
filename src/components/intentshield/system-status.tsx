@@ -228,7 +228,7 @@ export default function SystemStatus() {
         <Reveal>
           <SectionHeading
             id="status-title"
-            eyebrow="04 / SYSTEM STATUS"
+            eyebrow="08 / SYSTEM STATUS"
             title="Integration state, honestly reported"
             description="IntentShield never fakes a PayPal response. Unconfigured means unavailable."
           />

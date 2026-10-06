@@ -26,7 +26,7 @@ export async function GET() {
     {
       status: databaseConnected ? "ok" : "degraded",
       service: "intentshield",
-      phase: "1-foundation",
+      phase: "prototype-e2e",
       database: { connected: databaseConnected },
       paypal: {
         configured: isPayPalConfigured(),

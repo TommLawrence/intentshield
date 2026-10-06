@@ -20,11 +20,11 @@ import { ThemeToggle } from "@/components/intentshield/theme-toggle";
 const NAV_LINKS = [
   { label: "OVERVIEW", href: "#overview" },
   { label: "MANDATES", href: "#mandates" },
-  { label: "POLICY CHAIN", href: "#chain" },
-  { label: "TRUST BOUNDARY", href: "#trust" },
+  { label: "AGENT", href: "#agent" },
+  { label: "LAB", href: "#lab" },
+  { label: "LEDGER", href: "#ledger" },
   { label: "RULES", href: "#rules" },
   { label: "STATUS", href: "#status" },
-  { label: "ROADMAP", href: "#roadmap" },
 ] as const;
 
 export function SiteHeader() {

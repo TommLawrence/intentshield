@@ -241,7 +241,7 @@ export function MandateConsole() {
         <Reveal>
           <SectionHeading
             id="mandates-title"
-            eyebrow="06 / MANDATE CONSOLE"
+            eyebrow="01 / MANDATE CONSOLE"
             title="Turn intent into authorization."
             description="Describe what an AI agent may buy on your behalf. IntentShield's AI drafts a structured interpretation of your intent — you review it, correct anything, and confirm it. Nothing is authorized until you do."
           />

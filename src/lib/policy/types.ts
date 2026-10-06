@@ -1,13 +1,17 @@
 /**
- * IntentShield policy engine — domain contracts (Phase 1).
+ * IntentShield policy engine — domain contracts.
  *
  * The engine that implements these types is fully deterministic:
  * no LLM, no network, no time-of-eval randomness beyond the explicit
  * `now` passed in via the evaluation context. Same inputs → same decision,
- * always. It is unit-testable in isolation (tests land in the Codex phase).
+ * always. It is unit-testable in isolation.
+ *
+ * Version 1.1.0 (Phase 4): runtime engine added; rule catalog extended with
+ * R-15 (mandate approval mode) and R-16 (mandate not active). Codes are
+ * append-only — existing codes are never renumbered or repurposed.
  */
 
-export const POLICY_ENGINE_VERSION = "1.0.0";
+export const POLICY_ENGINE_VERSION = "1.1.0";
 
 export type PolicyDecision = "ALLOW" | "REVIEW" | "BLOCK";
 
@@ -28,7 +32,9 @@ export type RuleCode =
   | "R-11"
   | "R-12"
   | "R-13"
-  | "R-14";
+  | "R-14"
+  | "R-15"
+  | "R-16";
 
 export interface PolicyRuleDefinition {
   code: RuleCode;
@@ -57,6 +63,8 @@ export const POLICY_RULES: readonly PolicyRuleDefinition[] = [
   { code: "R-12", name: "Duplicate execution", description: "Same transaction already executed (idempotency)", outcomeOnViolation: "BLOCK" },
   { code: "R-13", name: "Untrusted metadata", description: "Suspicious external signals (e.g. injected instructions)", outcomeOnViolation: "REVIEW" },
   { code: "R-14", name: "Structural inconsistency", description: "Transaction shape inconsistent with the mandate", outcomeOnViolation: "BLOCK" },
+  { code: "R-15", name: "Approval mode", description: "Mandate requires human review of every transaction (MANUAL_REVIEW)", outcomeOnViolation: "REVIEW" },
+  { code: "R-16", name: "Mandate not active", description: "Mandate is not in ACTIVE status (e.g. revoked or draft)", outcomeOnViolation: "BLOCK" },
 ] as const;
 
 /** Structured mandate constraints — the authoritative form of the user's will. */
@@ -89,6 +97,8 @@ export interface ProposalItem {
   quantity: number;
   condition: "NEW" | "REFURBISHED";
   recurring: boolean;
+  /** Present when composed from catalogue rows — lets R-14 verify single-merchant structure. */
+  merchant?: string;
 }
 
 /** An agent proposal — always UNTRUSTED input to the policy engine. */
@@ -109,12 +119,19 @@ export interface TransactionProposal {
   externalMetadata?: Record<string, unknown> | null;
   /** Deterministic risk signals (e.g. INJECTED_INSTRUCTIONS) — never model output. */
   riskSignals?: string[];
+  /** sha256 duplicate-detection key — computed by deterministic code, never the agent. */
+  fingerprint?: string;
 }
 
 export interface EvaluationContext {
   /** Explicit clock — determinism and testability. */
   now: Date;
-  /** Fingerprints of transactions already executed under the same mandate. */
+  /**
+   * Fingerprints of transactions under the same mandate that were previously
+   * ACCEPTED (decision ALLOW) and are still live (not cancelled). A retried or
+   * duplicated proposal with the same fingerprint fires R-12 — this is the
+   * agent-retry double-charge protection.
+   */
   executedFingerprints: string[];
   /** Mandate status as persisted. */
   mandateStatus: string;

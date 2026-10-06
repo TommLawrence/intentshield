@@ -72,7 +72,7 @@ export function ChainRail() {
         <Reveal>
           <SectionHeading
             id="chain-title"
-            eyebrow="01 / POLICY CHAIN"
+            eyebrow="05 / POLICY CHAIN"
             title="One request, five checkpoints"
             description="Every AI payment action passes through the same guarded pipeline before any money moves."
           />

@@ -24,6 +24,10 @@ export interface AuditEventInput {
   entityId?: string | null;
   mandateId?: string | null;
   sessionId?: string | null;
+  transactionId?: string | null;
+  evaluationId?: string | null;
+  paymentIntentId?: string | null;
+  paypalOrderId?: string | null;
   payload?: Record<string, unknown> | null;
 }
 
@@ -58,6 +62,10 @@ export async function recordAuditEvent(
       entityId: input.entityId ?? null,
       sessionId: input.sessionId ?? null,
       mandateId: input.mandateId ?? null,
+      transactionId: input.transactionId ?? null,
+      evaluationId: input.evaluationId ?? null,
+      paymentIntentId: input.paymentIntentId ?? null,
+      paypalOrderId: input.paypalOrderId ?? null,
       payload: serializePayload(input.payload),
     },
   });

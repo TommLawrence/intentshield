@@ -36,43 +36,43 @@ const PHASES: Phase[] = [
     id: "phase-3",
     label: "PHASE 3",
     title: "AGENT & CATALOGUE",
-    sub: "Controlled product catalogue, agent sessions, proposals",
-    status: "NEXT",
+    sub: "Controlled product catalogue, real AI agent search, SKU-only proposals",
+    status: "COMPLETE",
   },
   {
     id: "phase-4",
     label: "PHASE 4",
     title: "POLICY ENGINE",
-    sub: "Deterministic ALLOW / REVIEW / BLOCK with reasons",
-    status: "PLANNED",
+    sub: "16 deterministic rules, ALLOW / REVIEW / BLOCK with reasons",
+    status: "COMPLETE",
   },
   {
     id: "phase-5",
     label: "PHASE 5",
     title: "PAYPAL EXECUTION",
-    sub: "Server-side Orders v2, buyer approval, capture, idempotency",
-    status: "PLANNED",
+    sub: "Orders v2 + idempotency + honest sandbox gate — buyer-approval leg activates when credentials are set",
+    status: "COMPLETE",
   },
   {
     id: "phase-6",
     label: "PHASE 6",
     title: "AUDITABILITY",
     sub: "Payment intent records, activity ledger, correlation IDs",
-    status: "PLANNED",
+    status: "COMPLETE",
   },
   {
     id: "phase-7",
     label: "PHASE 7",
     title: "ADVERSARIAL LAB",
     sub: "Ten scripted attack scenarios, every one observable",
-    status: "PLANNED",
+    status: "COMPLETE",
   },
   {
     id: "phase-8",
     label: "PHASE 8",
     title: "HARDENING",
     sub: "Security review, error states, accessibility, performance",
-    status: "PLANNED",
+    status: "NEXT",
   },
   {
     id: "phase-9",
@@ -94,7 +94,7 @@ export function Roadmap() {
     <section id="roadmap" aria-labelledby="roadmap-title">
       <div className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 md:py-24">
         <Reveal>
-          <SectionHeading id="roadmap-title" eyebrow="05 / ROADMAP" title="Foundation now, firewall next" />
+          <SectionHeading id="roadmap-title" eyebrow="09 / ROADMAP" title="Foundation now, firewall next" />
         </Reveal>
 
         <Reveal delay={60} className="mt-10">

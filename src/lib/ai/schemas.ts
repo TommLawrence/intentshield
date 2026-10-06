@@ -72,10 +72,48 @@ export const mandateDraftSchema = z
 
 export type MandateDraft = z.infer<typeof mandateDraftSchema>;
 
+/**
+ * Schema for the shopping agent's catalogue search (Phase 3).
+ *
+ * The agent PROPOSES by SKU reference only — it never states prices, totals,
+ * currencies or merchant names. Deterministic server code re-reads the
+ * authoritative catalogue rows and composes the transaction. A model that
+ * hallucinates a price has no effect: `.strict()` rejects extra fields and
+ * unknown SKUs are dropped before composition.
+ */
+export const productSearchSchema = z.strictObject({
+  picks: z
+    .array(
+      z.strictObject({
+        sku: z.string().trim().min(1).max(32),
+        quantity: z.number().int().min(1).max(10),
+        reason: z.string().trim().max(300),
+      })
+    )
+    .max(5)
+    .describe("Products selected from the catalogue, by SKU exactly as listed"),
+  notes: z
+    .string()
+    .trim()
+    .max(300)
+    .nullable()
+    .describe("One short shopping-agent remark for the human, or null"),
+});
+
+export type ProductSearchResult = z.infer<typeof productSearchSchema>;
+
 /** Thrown when model output fails schema validation or cannot be parsed. */
 export class AIExtractionError extends Error {
   constructor(reason: string) {
     super(`Intent extraction failed validation: ${reason}. The output was NOT trusted. Failing safe.`);
     this.name = "AIExtractionError";
+  }
+}
+
+/** Thrown when the product-search completion fails schema validation. */
+export class AISearchError extends Error {
+  constructor(reason: string) {
+    super(`Product search failed validation: ${reason}. The output was NOT trusted. Failing safe.`);
+    this.name = "AISearchError";
   }
 }

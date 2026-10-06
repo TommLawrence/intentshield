@@ -106,7 +106,7 @@ export function TrustBoundary() {
         <Reveal>
           <SectionHeading
             id="trust-title"
-            eyebrow="02 / TRUST BOUNDARY"
+            eyebrow="06 / TRUST BOUNDARY"
             title="What the model may never touch"
             description="External content can be reasoned about. It can never acquire authority."
           />

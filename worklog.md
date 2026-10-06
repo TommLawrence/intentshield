@@ -187,3 +187,90 @@ Work Log:
 
 Stage Summary:
 - Phase 2 is browser-verified end-to-end including the ambiguity, malformed-input, and prompt-injection paths. One real bug (Toaster mount) found and fixed during verification. §26 UX criterion and §27 architectural criteria all demonstrated.
+
+---
+Task ID: 11 (11-a … 11-g)
+Agent: main (Z.ai Code)
+Task: Phases 3–7 backend — policy engine runtime, catalogue, agent search, guarded executor, PayPal integration, adversarial lab, all APIs
+
+Work Log:
+- BUG FIX (user-reported): review-dialog.tsx classification badge ("INTERPRETATION COMPLETE"/"CLARIFICATION NEEDED") sat under the dialog's absolute X close button — added pr-10 to the header row (badge now clears the X).
+- src/lib/policy/types.ts: POLICY_ENGINE_VERSION → 1.1.0; rule catalog extended append-only with R-15 (approval mode → REVIEW) and R-16 (mandate not ACTIVE → BLOCK) = 16 rules; ProposalItem.merchant + TransactionProposal.fingerprint added; executedFingerprints semantics documented (live previously-ALLOWed transactions).
+- src/lib/policy/engine.ts (NEW): the deterministic engine. All 16 rules evaluated on every call, PASS recorded explicitly; decision BLOCK > REVIEW > ALLOW; derivation-based evaluationId (sha256 of judged inputs); pure — no db/network/clock (context.now only).
+- prisma/schema.prisma: ProposedTransaction += source ("AGENT"|"LAB"), scenarioId, correlationId, agentMeta (non-authoritative display JSON), index on correlationId; PayPalOrder += approveUrl. db push OK (client regenerated; dev server restarted to pick it up).
+- src/lib/audit.ts: writer now accepts transactionId/evaluationId/paymentIntentId/paypalOrderId entity refs.
+- Catalogue (NEW): seed-data.ts (16 products incl. 7 adversarial: over-budget, recurring warranty, refurb, EUR, $99 shipping, merchant prompt-injection LAP-007, grey-market metadata injection LAP-009); risk.ts deterministic scanner (INJECTED_INSTRUCTIONS / UNTRUSTED_METADATA / RECURRING_SMUGGLE / ADVERSARIAL_LISTING — regex, no LLM); service.ts idempotent ensureCatalogSeeded + listCatalog + riskFlags persisted on seed.
+- AI layer: schemas.ts += productSearchSchema (strict; picks by SKU ONLY — model never states money); provider.ts += searchProducts(catalog context); zai.ts += SEARCH_SYSTEM_PROMPT (tuned after live test to "single best match by default" — first run proposed a 5-laptop cart which the engine correctly BLOCKed for R-01/R-08/R-14; prompt now yields one pick) + hard data-not-instructions rule.
+- Agent service (NEW src/lib/agent/): compose.ts pure composition from authoritative DB rows (8% flat tax, integer minor units, per-line shipping, MIXED condition, signals recomputed from full text); service.ts — runAgentSearch (session → AI search → unknown-SKU drops → compose → engine → persist) + persistProposedTransaction shared wall (tx row + PolicyEvaluation + AGENT/TRANSACTION_PROPOSED/POLICY_DECIDED/REVIEW_REQUIRED/BLOCKED audits, one correlationId, status map ALLOW→EVALUATED / REVIEW→IN_REVIEW / BLOCK→BLOCKED).
+- Transactions service (NEW src/lib/transactions/): types.ts client-safe contracts (TransactionListItem/Detail = PIR §18, TransactionAgentMeta, timeline, paypalNarrative); validation.ts strict request schemas; service.ts — listTransactions (ledger), getTransactionDetail (full PIR with timeline + audit), reviewTransaction (APPROVE creates PaymentIntent decidedBy USER; REJECT cancels), executeTransaction = THE GUARDED EXECUTOR (structural refusals for BLOCKED; idempotent return of live AWAITING_BUYER orders; FRESH deterministic re-evaluation at execution time; honest PAYPAL_NOT_CONFIGURED 409 without creating intents; PayPal Orders v2 create with full purchase-unit breakdown — items/shipping/tax reconcile check, PayPal-Request-Id = executionId, returnUrl ?intent=<intentId>), captureTransaction (getOrder verification before capture; capture PayPal-Request-Id = capture_<executionId>; terminal states idempotent).
+- PayPal client: createOrder extended with items breakdown + invoice_id + reconciliation guard (never sends inconsistent totals).
+- Lab service (NEW src/lib/lab/service.ts): idempotent fixture mandates (LAB-STD $900/USD/40/new-only/laptops/730d ACTIVE; LAB-EXP same terms with elapsed validity), 10 scenarios A–J mapped to seeded SKUs, scenario start cancels still-live prior LAB transactions (deterministic repeatability §29; history preserved; COMPLETED payments never touched), every scenario runs through the REAL persistProposedTransaction wall (no mocks).
+- API routes (NEW): GET /api/products; POST /api/agent/search; GET /api/transactions; GET /api/transactions/[id]; POST .../review; POST .../execute (proxy-aware origin for return URLs); POST .../capture; GET /api/lab/scenarios; POST /api/lab/run.
+- /api/health: phase label → "prototype-e2e".
+- CURL VERIFICATION (real AI glm-4.6 + real DB): catalogue 16/7-adversarial with correct deterministic signals (LAP-007/009 flagged INJECTED_INSTRUCTIONS+UNTRUSTED_METADATA) ✓; all 10 lab scenarios exactly per §20 — A ALLOW 884.92 / B R-01 / C R-02 / D R-04+R-06 / E R-05 / F R-03 / G R-09 / H attempt1 ALLOW + attempt2 R-12 / I R-11 / J REVIEW R-13 ✓; agent search on real confirmed mandate: 5-pick over-cart correctly BLOCKed (R-01+R-02+R-08+R-14), tuned prompt → single LAP-001 pick → ALLOW 884.92 all-16-pass ✓; execute ALLOWed tx → honest 409 PAYPAL_NOT_CONFIGURED (retried: same, no duplicate side effects) ✓; execute BLOCKED tx → 409 EXECUTION_REFUSED ✓; execute IN_REVIEW tx → 409 REVIEW_REQUIRED, human APPROVE → intent IS-1001 decidedBy USER + timeline TRANSACTION APPROVED, execute → passes review gate to honest PayPal gate ✓; mandate revoked between proposal and execution → executor re-evaluation BLOCKed tx with R-16 violation recorded ✓; REJECT → CANCELLED + execute 409 ✓; unknown mandate 404, short request 400, revoked-mandate search 409 ✓; ledger 14 rows with decisions/statuses ✓; tsc clean (src), lint clean.
+- Dev server note: prisma client changes require a dev-server restart (old client in memory); restarted detached per the established double-fork pattern.
+
+Stage Summary:
+- The full backend chain is LIVE and curl-verified: NL intent → AI extraction → schema wall → human confirm → versioned mandate → AI agent search (SKU-only proposals) → deterministic composition from DB rows → 16-rule policy engine → ALLOW/REVIEW/BLOCK → human review gate → guarded executor (fresh re-eval + idempotency) → honest PayPal gate (NEVER simulated; ready for real sandbox credentials) → capture path → PIR + full audit trail.
+- API CONTRACT FROZEN for the UI (Task 12): see src/lib/transactions/types.ts (client-safe), src/lib/mandates/types.ts (existing), /api/lab + /api/products response shapes (re-declare locally in the UI — lab/catalog service files import db and MUST NOT be imported client-side).
+- BLOCK is structural: /api/transactions/:id/execute refuses BLOCKED transactions with 409 EXECUTION_REFUSED; there is no code path from a BLOCK decision to a PayPal call.
+- PayPal leg NOT VERIFIED against real sandbox (no credentials in env — honest 409 by design). Everything up to the PayPal HTTP call is verified; buyer-approval + capture paths are implemented per Orders v2 and wait on credentials.
+
+---
+Task ID: 12
+Agent: full-stack-developer (launched by main; context-deadline hit before it could report — its work was completed and verified by main in Task 13)
+Task: Phase 3–7 UI — agent & execution console, adversarial lab, activity ledger + PIR dialog, integration edits
+
+Work Log:
+- Created src/components/intentshield/agent/{shared.tsx, console.tsx, execution-controls.tsx}: section 02 AGENT & EXECUTION — ACTIVE-mandate Select, request textarea with example chips, RUN AGENT SEARCH (5–20s honest loading), proposal/summary/policy-evaluation/execution panels, honest PAYPAL_NOT_CONFIGURED display, approve-and-execute / reject flows, PIR link.
+- Created src/components/intentshield/lab/lab.tsx: section 03 — 10 scenario cards (letter badge, attack, expected), run buttons, per-attempt narratives + decision + fired rules + behaved-as-expected verification, PIR links, fixture notes.
+- Created src/components/intentshield/ledger/{shared.tsx, pir-dialog.tsx, ledger.tsx}: section 04 — decision/source filters + search, sticky-header table, row → PIR dialog (USER INTENT / MANDATE / AGENT PROPOSAL / POLICY DECISION / rule outcomes / PAYPAL / TIMELINE / tinted AUDIT TRAIL), footer execution controls for IN_REVIEW/EVALUATED rows (ledger doubles as review cockpit), ledger-refresh CustomEvent.
+- Created src/components/intentshield/return-handler.tsx: PayPal return-redirect capture (?intent= → resolve ledger row → POST capture → toasts + ledger refresh; ?intent-cancelled → honest cancel toast; URL cleaned).
+- Integration: page.tsx order Hero → Mandates → Agent → Lab → Ledger → Chain → Trust → Rules → Status → Roadmap (+ReturnHandler); nav updated (OVERVIEW/MANDATES/AGENT/LAB/LEDGER/RULES/STATUS); hero CTA "PHASE 3–7 LIVE"; roadmap phase statuses; eyebrow renumbering 01–09 sequential.
+- lint 0 errors, tsc clean at handoff; browser-verified: page render, real agent search (ALLOW), lab J approve→execute honest gate — interrupted by context deadline during final reporting.
+
+Stage Summary:
+- All UI files landed; contract adherence verified by main in Task 13. One recommendation from this build: none blocking — main fixed a stale rule-catalog copy (below) that this task was not authorized to touch.
+
+---
+Task ID: 13
+Agent: main (Z.ai Code)
+Task: Phase 3–7 integration verification — browser E2E, defect fixes, final review
+
+Work Log:
+- lint clean, tsc clean (src/), dev server healthy; /api/health now "prototype-e2e".
+- DEFECT FOUND & FIXED (rule-catalog.tsx): Phase 1 had a hardcoded LOCAL copy of the rules (14) — stale vs the engine's 16. Replaced with import of POLICY_RULES from @/lib/policy/types (single source of truth), title "Sixteen deterministic rules", R-15/R-16 now render; /api/health + system-status already report 16 dynamically.
+- DEFECT FOUND & FIXED (taxonomy drift): mandate extraction produced allowedCategories like ["electronics","computers"] which never match catalogue categories ("laptops") → R-06 blocked every golden-path transaction. Extraction prompt now enforces the canonical taxonomy (laptops/phones/software/office-equipment/subscriptions/accessories); verified: "laptop" → ["laptops"], "phone" → ["phones"].
+- PROMPT TUNING (proposer reliability): "find me a laptop" occasionally proposed the $1,249 flagship (→ R-01 BLOCK — honest but unstable golden path). Search prompt now instructs the agent to prefer the best match that FITS the user's stated preferences (budget), while keeping "the policy engine makes every authorization decision". 3/3 runs then proposed LAP-001; R-12 duplicate protection itself verified when identical re-searches hit the prior live ALLOW (rejected via the review endpoint to clean the demo state).
+- BROWSER E2E (agent-browser, one session per invocation — browser state does not persist across invocations on this platform; pkill cleanup between runs; HMR websocket makes networkidle hang, fixed waits used):
+  (1) page loads, ZERO page errors/console errors; all 9 sections render in order with sequential eyebrows 01–09;
+  (2) LAB scenario B via UI → BLOCK + R-01 + "NOT REACHED — blocked by policy" + BEHAVED AS EXPECTED ✓ (screenshot phase3-ui-lab-b.png);
+  (3) LAB scenario J via UI → REVIEW + R-13 + behaved ✓;
+  (4) ledger row → PIR dialog complete (USER INTENT / MANDATE / AGENT PROPOSAL / POLICY DECISION / PAYPAL / TIMELINE / APPROVE control) ✓;
+  (5) J-transaction APPROVE & EXECUTE via AlertDialog confirm → honest "PayPal sandbox is not configured — execution stopped honestly" panel with server message + setup hint + retry button ✓ (screenshot phase3-ui-pir-execute.png);
+  (6) REAL AI agent search through the UI on a fresh $900/laptops mandate → LAP-001 proposal, ALLOW — all 16 rules passed, EXECUTE button present ✓ (screenshot phase3-ui-agent-allow.png);
+  (7) EXECUTE from PIR → honest not-configured panel with "never fakes" copy ✓;
+  (8) REVIEW-DIALOG CLOSE-BUTTON FIX (the user-reported bug) verified by geometry: badge right edge x=959, close X left edge x=991 → NO OVERLAP ✓;
+  (9) mobile 390px: scrollWidth==clientWidth (no horizontal overflow), open PIR dialog no overflow, blocked-transaction PIR shows NO EXECUTION PATH and NO execute button ✓ (screenshot phase3-ui-mobile-blocked-pir.png);
+  (10) ledger decision filter (BLOCK → only BLOCK rows of 34), all 7 nav anchors target real sections, footer at content end ✓.
+- R-12 verified through the INTERACTIVE path (not just lab H): identical re-search under a live ALLOW → duplicate BLOCK; rejecting the prior transaction frees the fingerprint (correct product semantics).
+- dev.log review: zero 500s, zero prisma:query noise; one wedge of next-server under Chrome resource pressure → hard-restarted detached per established pattern, healthy since.
+
+Stage Summary:
+- The core journey is browser-verified end-to-end through the UI: mandate → agent search (real AI) → ALLOW → execute → honest PayPal gate; J REVIEW → human approve → execute; lab B/J live runs; blocked paths structurally buttonless; PIR complete; mobile clean; zero console errors.
+- Fixed in this pass: close-button overlap (user-reported), stale 14-rule UI copy, category taxonomy drift, proposer budget-blindness.
+- PayPal live-leg remains NOT VERIFIED (no sandbox credentials — honest 409 by design; exact activation steps documented in README).
+
+---
+Task ID: 14
+Agent: main (Z.ai Code)
+Task: Documentation — README rewrite, ARCHITECTURE/SECURITY addenda, final report
+
+Work Log:
+- README.md rewritten for the working prototype: status banner (chain complete; PayPal live leg pending credentials), 3-minute demo script, 16-rule table with outcomes, updated repo layout, PayPal execution section (setup steps + what the honest gate does), updated roadmap (phases 0–7 complete, 8 in progress), honest limitations (PayPal leg not exercised here, tests deferred with the Adversarial Lab as the live scenario suite, flat 8% tax documented).
+- ARCHITECTURE.md: addendum §16–19 — what shipped (layer table), the golden-path sequence diagram, decisions & deviations since Phase 0 (no AG Grid [dependency discipline, shadcn Table instead], no in-browser v6 SDK yet [Orders v2 approval link; trust boundary unchanged], R-12 semantics, tax simplification, extraction taxonomy), verification state (curl-verified / browser-verified / NOT verified lists).
+- SECURITY.md: addendum §10–11 — the four concrete injection-defence layers (data-not-instructions, SKU-only proposals, deterministic scanner → R-13 REVIEW, the LLM-free wall) and execution-boundary restatements (re-eval at execution time, idempotency, honest not-configured).
+- No secrets committed anywhere (.env.example has placeholders only; env validation reports field names, never values).
+
+Stage Summary:
+- Documentation now matches the built system, with honest not-verified items explicitly listed. Final implementation report delivered in chat per checkpoint format.

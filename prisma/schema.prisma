@@ -146,7 +146,7 @@ model ProposedTransaction {
   sessionId        String
   session          AgentSession      @relation(fields: [sessionId], references: [id])
   merchant         String
-  items            String // JSON line-item snapshot
+  items            String // JSON line-item snapshot (includes per-pick agent reasoning)
   subtotal         Int // minor units
   shipping         Int // minor units
   tax              Int // minor units
@@ -160,6 +160,14 @@ model ProposedTransaction {
   riskSignals      String? // JSON string[]
   fingerprint      String // sha256(mandateId|merchant|items|total|currency) — duplicate detection key
   status           String            @default("PROPOSED") // PROPOSED | EVALUATED | IN_REVIEW | BLOCKED | EXECUTING | COMPLETED | FAILED | CANCELLED
+  // Provenance: AGENT (interactive shopping-agent run) | LAB (adversarial lab fixture)
+  source           String            @default("AGENT")
+  scenarioId       String? // adversarial lab scenario (LAB only)
+  // The correlationId issued at proposal time — later review/execute/capture
+  // actions echo it so the WHOLE life of one transaction shares one trace id.
+  correlationId    String
+  // NON-AUTHORITATIVE display data: { provider, model, request, notes, picks, warnings }.
+  agentMeta        String?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   evaluations      PolicyEvaluation[]
@@ -168,6 +176,7 @@ model ProposedTransaction {
   @@index([mandateId, mandateVersion])
   @@index([fingerprint])
   @@index([status])
+  @@index([correlationId])
 }
 
 // ── Policy evaluations (deterministic engine output) ─────────────────────
@@ -217,6 +226,7 @@ model PayPalOrder {
   amount          Int // minor units
   currency        String
   environment     String        @default("SANDBOX")
+  approveUrl      String? // PayPal's payer-approval link (rel=approve/payer)
   rawSnapshot     String? // JSON — sanitized API response snapshot (ids/status only, no PII)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt

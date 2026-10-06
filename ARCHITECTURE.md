@@ -178,3 +178,71 @@ This scaffold was built in a constrained sandbox platform; three deviations from
 2. In Phase 5, implement buyer approval against the official v6 sample repo and confirm the client-token flow before writing custom code.
 3. Seed the catalogue with all adversarial archetypes from the build plan (§29) so demo scenarios are deterministic and repeatable.
 4. Keep every "sandbox/prototype" label visible in the UI — the product's honesty is part of its pitch.
+
+---
+
+# Addendum — Phases 3–7 (implemented & verified)
+
+This addendum records what the working prototype added on top of the Phase 1 foundation. The
+original sections above remain accurate; the notes below supersede anything stale.
+
+## 16. What shipped
+
+| Layer | Where | Notes |
+|---|---|---|
+| Deterministic policy engine v1.1.0 | `src/lib/policy/engine.ts` | 16 rules (R-15 approval-mode → REVIEW and R-16 mandate-not-ACTIVE → BLOCK appended). Pure: no db, no network, no clock (explicit `context.now`). Every rule evaluated every call; PASS recorded explicitly. |
+| Controlled catalogue | `src/lib/catalog/` | 16 seeded products (7 adversarial: over-budget, recurring warranty, refurb, EUR listing, $99 shipping, merchant prompt-injection, injected metadata). Idempotent auto-seed on first read. |
+| Risk-signal scanner | `src/lib/catalog/risk.ts` | Deterministic regex detection of INJECTED_INSTRUCTIONS / RECURRING_SMUGGLE / UNTRUSTED_METADATA / ADVERSARIAL_LISTING over untrusted text + metadata → feeds R-13 (REVIEW). Backstop, not the primary defense. |
+| Shopping agent | `src/lib/agent/` | AI proposes **by SKU only** (strict schema; unknown SKUs dropped). Deterministic composition from authoritative DB rows (8% flat tax, integer minor units). `persistProposedTransaction` is the single wall used by BOTH the interactive agent and the adversarial lab. |
+| Transactions / guarded executor | `src/lib/transactions/service.ts` | PIR builder (§18), human review gate (APPROVE creates a PaymentIntent decidedBy USER), execute = guarded executor: structural refusal for BLOCKED, idempotent return of live AWAITING_BUYER orders, **fresh deterministic re-evaluation at execution time** (a mandate revoked after proposal BLOCKs before PayPal), honest PAYPAL_NOT_CONFIGURED (no intent created), then Orders v2 create with full breakdown + `PayPal-Request-Id = executionId`. Capture verifies `getOrder` state first; capture idempotent by `capture_<executionId>`. |
+| Adversarial lab | `src/lib/lab/service.ts` | 10 scenarios (A–J) through the REAL pipeline with fixed picks (deterministic, repeatable). System-owned fixture mandates (standard + expired). Re-running a scenario cancels its previous still-live transactions (history preserved; COMPLETED payments never touched). |
+| API surface | `src/app/api/` | `health · mandates (+draft/confirm/revoke) · products · agent/search · transactions (+review/execute/capture) · lab (scenarios/run)`. Uniform error envelope `{error:{code,message,details?}}`. |
+| UI | `src/components/intentshield/{agent,lab,ledger}/` | Sections 02 AGENT & EXECUTION, 03 ADVERSARIAL LAB, 04 ACTIVITY LEDGER (+ Payment Intent Record dialog, execution controls, PayPal return handler `/?intent=…`). |
+
+## 17. Sequence (the golden path, as built)
+
+```
+mandate draft ─AI→ schema wall ─normalize→ DRAFT ─human confirm→ MandateVersion v1 (ACTIVE)
+agent search  ─AI SKU picks→ compose from DB rows → fingerprint → engine (16 rules)
+   ALLOW ──────────────→ EVALUATED ─execute→ [re-eval] → PayPal order → buyer approval → capture → COMPLETED
+   REVIEW (R-13/R-15) ─→ IN_REVIEW ─human approve (intent decidedBy USER)→ execute path above
+   BLOCK ──────────────→ BLOCKED — structurally no execution path; audited "NOT REACHED"
+```
+
+One correlationId rides the whole life of a transaction (proposal-time issued; review /
+execute / capture echo it by default).
+
+## 18. Decisions & deviations since Phase 0
+
+1. **No AG Grid** (dependency discipline on this platform): the Activity Ledger uses shadcn
+   Table with client-side decision/source filters + search. AG Grid remains a Codex-phase option.
+2. **No JS SDK v6 in-browser checkout** (yet): buyer approval uses the Orders v2 payer-approval
+   link with `return_url = <origin>/?intent=<id>` — deliberately simple, server-driven, and
+   works behind the platform gateway. The v6 SDK evaluation stands; adopting it is a UI-layer
+   swap that does not change the trust boundary (approval happens at PayPal either way).
+3. **R-12 semantics**: duplicate = identical fingerprint of a previously ACCEPTED (ALLOW),
+   still-live transaction under the same mandate — protecting against agent retries /
+   double-submits. Rejections cancel and free the fingerprint.
+4. **Tax**: flat 8% of subtotal, integer minor units — documented demo simplification.
+5. **Extraction taxonomy**: the mandate-extraction prompt maps product wording onto the
+   catalogue's canonical categories (laptops/phones/software/office-equipment/subscriptions/
+   accessories) so confirmed mandates and the catalogue agree; humans still see and edit the
+   categories at confirmation.
+6. **Testing on this platform**: no test frameworks; the Adversarial Lab is the live scenario
+   suite (10 attacks through the real pipeline) and the full chain was curl- + browser-verified.
+   Unit/integration tests land in the Codex phase against these frozen contracts.
+
+## 19. Verification state (end of this build)
+
+- **curl-verified**: all 10 lab scenarios (A ALLOW; B–I BLOCK with the exact rule; J REVIEW),
+  real-AI agent search (ALLOW 884.92 USD; over-cart correctly BLOCKed R-01/R-02/R-08/R-14),
+  review gate (approve → execute), revoked-mandate re-evaluation (R-16), reject path, duplicate
+  protection (R-12), honest PAYPAL_NOT_CONFIGURED (repeat-safe), idempotent execute, error
+  states (400/404/409 families), ledger + PIR payloads.
+- **browser-verified**: section rendering & renumbering, real AI search through the UI (ALLOW
+  + 16-rule panel + execute button), execute from the PIR (honest not-configured panel),
+  J-scenario approve → execute through the UI, lab scenario runs (B, J) with behaved-as-expected
+  markers, ledger filters, PIR dialog completeness, blocked-transaction PIR (no execute button),
+  mobile 390px (no overflow), zero page errors.
+- **not verified**: the live PayPal sandbox HTTP leg (no credentials in this environment) and
+  webhook handling (not implemented, by design).

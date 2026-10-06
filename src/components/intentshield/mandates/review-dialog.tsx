@@ -349,7 +349,9 @@ export function ReviewDialog({
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="top-[50%] flex max-h-[85vh] w-[calc(100vw-1.5rem)] max-w-3xl translate-y-[-50%] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
         <DialogHeader className="shrink-0 border-b px-5 py-4 sm:px-6">
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          {/* pr-10 clears the dialog's absolute close (X) button so the
+              classification badge never sits underneath it. */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pr-10">
             <MonoLabel>DRAFT MANDATE REVIEW</MonoLabel>
             <Badge
               variant="outline"
