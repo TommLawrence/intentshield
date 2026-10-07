@@ -251,9 +251,9 @@ export function MandateConsole() {
           <div className="grid items-start gap-6 lg:grid-cols-[420px_minmax(0,1fr)]">
             {/* LEFT — create a draft */}
             <Card className="gap-0 py-0">
-              <div className="border-b px-4 py-3.5">
+              <div className="border-b px-4 py-3">
                 <MonoLabel>NEW MANDATE</MonoLabel>
-                <p className="mt-1.5 text-[12px] leading-relaxed text-muted-foreground">
+                <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
                   Natural language in, structured draft out. The AI interprets;
                   authorization stays with you.
                 </p>
@@ -420,7 +420,7 @@ export function MandateConsole() {
                         aria-busy={opening}
                         disabled={openingId !== null}
                         onClick={() => void handleOpenRow(item)}
-                        className="flex w-full items-start justify-between gap-3 border-b px-4 py-4 text-left transition-colors last:border-b-0 hover:bg-muted/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none"
+                        className="flex w-full items-start justify-between gap-3 border-b px-4 py-3.5 text-left transition-colors last:border-b-0 hover:bg-muted/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none"
                       >
                         <span className="min-w-0 flex-1">
                           <span className="block font-display text-[15px] font-semibold tracking-tight text-foreground">

@@ -136,7 +136,7 @@ export function SystemStatusPill() {
     <a
       href="#status"
       className={cn(
-        "inline-flex h-11 items-center gap-2 rounded-md border bg-card/60 px-3 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        "inline-flex h-11 min-w-0 items-center gap-2 rounded-md border bg-card/60 px-3 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
         pill.className
       )}
       aria-label={`System status: ${pill.label.toLowerCase()}. View integration state.`}
@@ -148,7 +148,7 @@ export function SystemStatusPill() {
           pill.pulsing && "animate-pulse"
         )}
       />
-      <span className="font-data text-[10px] font-medium uppercase tracking-[0.14em]">
+      <span className="truncate font-data text-[10px] font-medium uppercase tracking-[0.14em]">
         {pill.label}
       </span>
     </a>

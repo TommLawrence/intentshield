@@ -214,9 +214,9 @@ export function AgentConsole() {
           <div className="grid items-start gap-6 lg:grid-cols-[420px_minmax(0,1fr)]">
             {/* LEFT — the agent brief */}
             <Card className="gap-0 py-0">
-              <div className="border-b px-4 py-3.5">
+              <div className="border-b px-4 py-3">
                 <MonoLabel>AGENT BRIEF</MonoLabel>
-                <p className="mt-1.5 text-[12px] leading-relaxed text-muted-foreground">
+                <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
                   A real AI shopping agent, proposing against a controlled
                   catalogue under your authorization.
                 </p>
@@ -267,16 +267,24 @@ export function AgentConsole() {
                           className="h-11 w-full"
                           aria-describedby="agent-mandate-hint"
                         >
-                          <SelectValue placeholder="Select an ACTIVE mandate" />
+                          <SelectValue
+                            placeholder="Select an ACTIVE mandate"
+                            className="min-w-0 flex-1"
+                          />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="max-w-[calc(100vw-1.5rem)]">
                           {mandates.map((item) => (
-                            <SelectItem key={item.id} value={item.id}>
-                              <span className="flex min-w-0 flex-col gap-0.5">
-                                <span className="truncate text-[13px] font-medium">
+                            <SelectItem
+                              key={item.id}
+                              value={item.id}
+                              textValue={item.title}
+                              className="max-w-full"
+                            >
+                              <span className="flex min-w-0 items-baseline gap-2">
+                                <span className="min-w-0 flex-1 truncate text-[13px] font-medium">
                                   {item.title}
                                 </span>
-                                <span className="font-data text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                                <span className="shrink-0 font-data text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
                                   {`${formatMoney(item.maxTotal ?? 0, item.currency ?? "USD")} · V${item.currentVersion}`}
                                 </span>
                               </span>
@@ -392,10 +400,10 @@ export function AgentConsole() {
 
             {/* RIGHT — the result */}
             <Card className="gap-0 py-0">
-              <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
+              <div className="flex min-w-0 items-center justify-between gap-3 border-b px-4 py-3">
                 <MonoLabel>RESULT</MonoLabel>
                 {selectedMandate ? (
-                  <span className="truncate font-data text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                  <span className="min-w-0 truncate font-data text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
                     {`UNDER ${selectedMandate.title}`}
                   </span>
                 ) : null}

@@ -251,16 +251,19 @@ export function ExecutionControls({
       <div className="flex w-full flex-col gap-2.5 sm:w-auto">
         {errorAlerts}
         {transaction.status === "IN_REVIEW" ? (
-          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+          <div className="flex flex-row flex-wrap items-center gap-2.5">
             <AlertDialog
               open={confirmApprove}
-              onOpenChange={(next) => !busy && setConfirmApprove(next)}
+              onOpenChange={(next) => {
+                if (next) setConfirmApprove(true);
+                else if (!approving) setConfirmApprove(false);
+              }}
             >
               <AlertDialogTrigger asChild>
                 <Button
                   type="button"
                   disabled={busy}
-                  className="h-11 font-data text-[11px] uppercase tracking-[0.14em]"
+                  className="h-11 min-w-0 flex-1 justify-center font-data text-[11px] uppercase tracking-[0.14em]"
                 >
                   {approving ? (
                     <>
@@ -272,7 +275,7 @@ export function ExecutionControls({
                     </>
                   ) : (
                     <>
-                      <UserCheck aria-hidden="true" className="size-4" />
+                      <UserCheck aria-hidden="true" className="size-4 shrink-0" />
                       APPROVE &amp; EXECUTE
                     </>
                   )}
@@ -289,7 +292,7 @@ export function ExecutionControls({
               variant="outline"
               disabled={busy}
               onClick={() => void handleReject()}
-              className="h-11 border-block/40 font-data text-[11px] uppercase tracking-[0.14em] text-block hover:bg-block/10 hover:text-block"
+              className="h-11 shrink-0 border-block/40 font-data text-[11px] uppercase tracking-[0.14em] text-block hover:bg-block/10 hover:text-block"
             >
               {rejecting ? (
                 <Loader2 aria-hidden="true" className="size-4 animate-spin" />
@@ -302,7 +305,7 @@ export function ExecutionControls({
             type="button"
             disabled={busy}
             onClick={() => void handleExecute()}
-            className="h-11 font-data text-[11px] uppercase tracking-[0.14em]"
+            className="h-11 w-full font-data text-[11px] uppercase tracking-[0.14em] sm:w-auto"
           >
             {executing ? (
               <>
@@ -370,7 +373,10 @@ export function ExecutionControls({
           <div className="flex flex-col gap-2.5 sm:flex-row">
             <AlertDialog
               open={confirmApprove}
-              onOpenChange={(next) => !busy && setConfirmApprove(next)}
+              onOpenChange={(next) => {
+                if (next) setConfirmApprove(true);
+                else if (!approving) setConfirmApprove(false);
+              }}
             >
               <AlertDialogTrigger asChild>
                 <Button

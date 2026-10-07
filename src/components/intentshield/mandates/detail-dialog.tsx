@@ -301,28 +301,28 @@ export function MandateDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className="top-[50%] flex max-h-[85vh] w-[calc(100vw-1.5rem)] max-w-3xl translate-y-[-50%] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
-        <DialogHeader className="shrink-0 border-b px-5 py-4 sm:px-6">
-          <div className="flex flex-wrap items-center gap-2">
+      <DialogContent className="top-[50%] flex max-h-[85vh] w-[calc(100vw-2rem)] max-w-3xl translate-y-[-50%] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
+        <DialogHeader className="shrink-0 gap-1.5 border-b px-4 py-3 sm:gap-2 sm:px-6 sm:py-4">
+          <div className="flex flex-wrap items-center gap-2 pr-11">
             <MandateStatusBadge status={current.status} />
             <span className="font-data text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
               {`V${current.currentVersion}`}
             </span>
           </div>
-          <DialogTitle className="pr-8 font-display text-lg font-semibold tracking-tight sm:text-xl">
+          <DialogTitle className="pr-11 font-display text-lg font-semibold tracking-tight sm:text-xl">
             {current.title}
           </DialogTitle>
-          <DialogDescription className="text-[13px] leading-relaxed">
+          <DialogDescription className="text-[13px] leading-snug">
             {description}
           </DialogDescription>
-          <p className="font-data text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+          <p className="font-data text-[10px] uppercase leading-snug tracking-[0.14em] text-muted-foreground">
             {`MANDATE ${current.id.slice(0, 8)} · CREATED ${formatUtc(
               current.createdAt
             )}`}
           </p>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-5 sm:px-6">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4 sm:space-y-6 sm:px-6 sm:py-5">
           {/* The human's words — always visible. */}
           <section aria-labelledby={`instruction-${current.id}`}>
             <BlockHeading id={`instruction-${current.id}`}>
@@ -453,8 +453,8 @@ export function MandateDetailDialog({
           </section>
         </div>
 
-        <div className="shrink-0 border-t px-5 py-4 sm:px-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+        <div className="shrink-0 border-t px-4 py-3 sm:px-6">
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-end">
             {current.status === "ACTIVE" ? (
               <AlertDialog
                 open={confirmRevoke}
@@ -509,8 +509,8 @@ export function MandateDetailDialog({
             ) : null}
             <Button
               type="button"
-              variant="outline"
-              className="h-11 font-data text-[11px] uppercase tracking-[0.14em]"
+              variant="ghost"
+              className="h-9 shrink-0 px-3 font-data text-[11px] uppercase tracking-[0.14em] text-muted-foreground hover:text-foreground"
               onClick={onClose}
             >
               CLOSE

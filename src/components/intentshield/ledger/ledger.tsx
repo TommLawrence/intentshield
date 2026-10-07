@@ -374,7 +374,7 @@ export function Ledger() {
                       <TableHead className="hidden px-2 font-data text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground md:table-cell">
                         PAYPAL
                       </TableHead>
-                      <TableHead className="pr-4 font-data text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground lg:table-cell">
+                      <TableHead className="hidden pr-4 font-data text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground lg:table-cell">
                         REF
                       </TableHead>
                     </TableRow>

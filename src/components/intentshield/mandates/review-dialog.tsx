@@ -347,12 +347,14 @@ export function ReviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className="top-[50%] flex max-h-[85vh] w-[calc(100vw-1.5rem)] max-w-3xl translate-y-[-50%] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
-        <DialogHeader className="shrink-0 border-b px-5 py-4 sm:px-6">
-          {/* pr-10 clears the dialog's absolute close (X) button so the
+      <DialogContent className="top-[50%] flex max-h-[85vh] w-[calc(100vw-2rem)] max-w-3xl translate-y-[-50%] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
+        <DialogHeader className="shrink-0 gap-1.5 border-b px-4 py-3 sm:gap-2 sm:px-6 sm:py-4">
+          {/* pr-11 clears the dialog's compact close (X) button so the
               classification badge never sits underneath it. */}
-          <div className="flex flex-wrap items-center justify-between gap-2 pr-10">
-            <MonoLabel>DRAFT MANDATE REVIEW</MonoLabel>
+          <div className="flex flex-wrap items-center justify-between gap-2 pr-11">
+            {/* Context label — hidden on mobile where the row would wrap;
+                the classification badge and description carry the context. */}
+            <MonoLabel className="hidden sm:block">DRAFT MANDATE REVIEW</MonoLabel>
             <Badge
               variant="outline"
               className={cn(
@@ -367,21 +369,21 @@ export function ReviewDialog({
                 : "CLARIFICATION NEEDED"}
             </Badge>
           </div>
-          <DialogTitle className="pr-8 font-display text-lg font-semibold tracking-tight sm:text-xl">
+          <DialogTitle className="pr-11 font-display text-lg font-semibold tracking-tight sm:text-xl">
             {input.title}
           </DialogTitle>
-          <DialogDescription className="text-[13px] leading-relaxed">
+          <DialogDescription className="text-[13px] leading-snug">
             The AI has drafted an interpretation of your instruction. Nothing
             is authorized yet — review it, correct anything, then confirm.
           </DialogDescription>
-          <p className="font-data text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+          <p className="font-data text-[10px] uppercase leading-snug tracking-[0.14em] text-muted-foreground">
             {`CORRELATION ${
               input.correlationId ? input.correlationId.slice(0, 8) : "—"
             }`}
           </p>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
           {submitError ? (
             <Alert variant="destructive" className="mb-5">
               <AlertCircle aria-hidden="true" />
@@ -744,21 +746,21 @@ export function ReviewDialog({
           </div>
         </div>
 
-        <div className="shrink-0 border-t px-5 py-4 sm:px-6">
+        <div className="shrink-0 border-t px-4 py-3 sm:px-6">
           {missingHelper ? (
-            <p role="status" className="mb-3 text-[12px] text-review">
+            <p role="status" className="mb-2.5 text-[12px] text-review">
               {missingHelper}
             </p>
           ) : null}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-[12px] leading-relaxed text-muted-foreground">
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-[12px] leading-snug text-muted-foreground">
               Confirming creates immutable version 1 and activates this mandate.
             </p>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex flex-row items-center gap-2.5">
               <Button
                 type="button"
                 variant="outline"
-                className="h-11 font-data text-[11px] uppercase tracking-[0.14em] sm:w-auto"
+                className="h-11 shrink-0 px-4 font-data text-[11px] uppercase tracking-[0.14em]"
                 onClick={onClose}
                 disabled={submitting}
               >
@@ -766,7 +768,7 @@ export function ReviewDialog({
               </Button>
               <Button
                 type="button"
-                className="h-11 font-data text-[11px] uppercase tracking-[0.14em] sm:w-auto"
+                className="h-11 min-w-0 flex-1 justify-center font-data text-[11px] uppercase tracking-[0.14em] sm:w-auto sm:flex-none"
                 onClick={() => void handleConfirm()}
                 disabled={!canConfirm}
               >

@@ -6,12 +6,11 @@ import { Menu, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   SystemStatusPill,
 } from "@/components/intentshield/system-status";
@@ -29,7 +28,6 @@ const NAV_LINKS = [
 
 export function SiteHeader() {
   const [scrolled, setScrolled] = React.useState(false);
-  const [open, setOpen] = React.useState(false);
 
   React.useEffect(() => {
     const onScroll = () => {
@@ -49,7 +47,7 @@ export function SiteHeader() {
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-3 px-4 sm:gap-4 sm:px-6">
         <a
           href="#overview"
-          className="flex min-h-11 items-center gap-2.5 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          className="flex min-h-11 shrink-0 items-center gap-2.5 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           <span className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-card">
             <ShieldCheck aria-hidden="true" className="size-4 text-primary" />
@@ -81,55 +79,43 @@ export function SiteHeader() {
           ))}
         </nav>
 
-        <div className="ml-auto flex items-center gap-1 lg:ml-0">
+        <div className="ml-auto flex min-w-0 items-center gap-1 lg:ml-0">
           <SystemStatusPill />
           <ThemeToggle />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-11 text-muted-foreground hover:text-foreground lg:hidden"
-            aria-label="Open navigation menu"
-            aria-expanded={open}
-            aria-controls="mobile-navigation"
-            onClick={() => setOpen(true)}
-          >
-            <Menu aria-hidden="true" className="size-5" />
-          </Button>
+          {/* Compact section menu — a popover anchored to the trigger, not a
+              full-height drawer. Radix provides the keyboard, focus and
+              screen-reader semantics (menu, aria-expanded, typeahead, Esc). */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-11 text-muted-foreground hover:text-foreground lg:hidden"
+                aria-label="Open navigation menu"
+              >
+                <Menu aria-hidden="true" className="size-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              sideOffset={8}
+              className="w-44"
+            >
+              {NAV_LINKS.map((link) => (
+                <DropdownMenuItem key={link.href} asChild>
+                  <a
+                    href={link.href}
+                    className="min-h-9 font-data text-[12px] uppercase tracking-[0.14em] text-muted-foreground data-[highlighted]:text-foreground"
+                  >
+                    {link.label}
+                  </a>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
-
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent
-          side="right"
-          className="w-[85vw] gap-0 border-border bg-background p-0 sm:max-w-xs"
-        >
-          <SheetHeader className="border-b px-5 py-4">
-            <SheetTitle className="font-data text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-              NAVIGATION
-            </SheetTitle>
-            <SheetDescription className="text-[13px]">
-              Jump to any section of this foundation shell.
-            </SheetDescription>
-          </SheetHeader>
-          <nav
-            id="mobile-navigation"
-            aria-label="Mobile"
-            className="flex flex-col px-5"
-          >
-            {NAV_LINKS.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                onClick={() => setOpen(false)}
-                className="flex min-h-11 items-center border-b py-3 font-data text-[12px] uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring last:border-b-0"
-              >
-                {link.label}
-              </a>
-            ))}
-          </nav>
-        </SheetContent>
-      </Sheet>
     </header>
   );
 }
