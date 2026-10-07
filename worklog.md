@@ -342,3 +342,20 @@ Stage Summary:
 - Pre-existing mobile select-value overflow root-caused and fixed in the shared ui/select.tsx.
 - DEMO_SCRIPT.md written for the submission video; linked from README.
 - Files changed: src/components/intentshield/semantics.tsx (new), hero.tsx, site-footer.tsx, mandates/console.tsx, agent/shared.tsx, agent/console.tsx, ui/select.tsx, DEMO_SCRIPT.md (new), README.md.
+
+---
+Task ID: 18
+Agent: main (Z.ai Code)
+Task: Push all updates to GitHub main with user-provided PAT; ensure the README carries no unnecessary information
+
+Work Log:
+- Reviewed the 3 unpushed commits (61cb333 accidental all-755 mode change, c824a95 mobile modal work, a634672 touch affordances + DEMO_SCRIPT.md) and the tracked file set for anything not meant for a public repo.
+- Repo hygiene before push: restored mode 100644 on all tracked files except *.sh scripts (the mode-change commit had set 164 files executable); untracked .zscripts/dev.pid (runtime PID artifact) and the two private working docs under upload/ (project prompt + personal global AI rules — files kept on disk, now gitignored).
+- README scrubbed of internal-environment references: "constrained sandbox environment" platform note rewritten as a design note; "(this platform exposes only `/`)" dropped from the repository layout; "the hosting platform doesn't run test suites" and "follow-up Codex phase" reworded to platform-neutral phrasing. "No Z Cloud platform services are required" kept on purpose (useful for LOCAL_SETUP.md readers).
+- Verified before push: only .env.example is tracked (real .env ignored), grep for github_pat/ghp_ across the tree is clean, no tokens staged anywhere.
+- Pushed main to origin (TommLawrence/intentshield) using the user-supplied fine-grained PAT in the one-time push URL only.
+
+Stage Summary:
+- origin/main now includes all 5 commits: the 3 prior feature commits plus "Hygiene: restore file modes, untrack runtime artifacts and private working docs" and "README: drop sandbox-platform-specific references".
+- README is free of sandbox/internal-platform references; the public tree no longer exposes the PID file or private working documents.
+- Note for the user: those files remain in already-pushed git history; fully purging them would require rewriting public history (not done unilaterally).

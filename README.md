@@ -65,7 +65,7 @@ USER INTENT → AI AGENT → INTENTSHIELD POLICY → PAYPAL → AUDIT
 | Payments | PayPal **Orders v2 REST API**, server-side only (OAuth client-credentials, `PayPal-Request-Id` idempotency) |
 | Runtime | Node 24 / Bun |
 
-> Platform note: this prototype was scaffolded in a constrained sandbox environment — hence SQLite + a single-route application shell. Both choices are deliberate and documented in [ARCHITECTURE.md](ARCHITECTURE.md).
+> Design note: the single-file SQLite database and the single-page control-room shell are deliberate prototype choices — both documented in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Quickstart
 
@@ -159,8 +159,7 @@ consumed by both the engine and the UI.
 prisma/schema.prisma        Data model: mandates + versions, catalogue, agent
                            sessions/actions, transactions, policy evaluations,
                            payment intents, PayPal orders, append-only audit
-src/app/                    Single-route application shell (this platform
-                           exposes only `/`) + API route handlers
+src/app/                    Single-page control-room shell + API route handlers
 src/app/api/               health · mandates · products · agent/search ·
                            transactions (+review/execute/capture) · lab
 src/components/intentshield/ Control-room UI: mandate console, agent &
@@ -197,7 +196,7 @@ SECURITY.md                 Trust boundaries & threat model
 - **The live PayPal sandbox leg was not exercised in this environment** (no credentials available). Everything up to the PayPal HTTP call — policy, gates, idempotency, breakdown construction, return-URL handling, capture preconditions — is implemented and the not-configured path is the verified default. Adding credentials is the only step needed to run the live leg.
 - **Auth is intentionally lightweight** for the hackathon MVP (demo identity); authorization *boundaries* inside the system (USER / AGENT / POLICY_ENGINE / PAYMENT_EXECUTOR / SYSTEM) are enforced structurally — see SECURITY.md.
 - **No webhooks yet** — deliberately deferred until a stable HTTPS endpoint exists; capture state is verified synchronously against PayPal instead.
-- **Tests are not bundled** — the hosting platform doesn't run test suites; the Adversarial Lab serves as the live, in-app scenario suite (ten attacks through the real pipeline), and unit/integration tests land in the follow-up Codex phase against the contracts defined here.
+- **Tests are not bundled yet** — the Adversarial Lab serves as the live, in-app scenario suite (ten attacks through the real pipeline); unit/integration tests land in a follow-up pass against the contracts defined here.
 - Tax is a flat 8% of subtotal (integer minor units) — a documented demo simplification.
 - Money assumes 2-decimal currencies (USD/EUR). Zero-decimal currencies are out of MVP scope.
 
