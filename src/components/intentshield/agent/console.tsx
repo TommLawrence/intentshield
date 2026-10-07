@@ -607,6 +607,7 @@ function AgentResult({
             <DecisionBanner
               decision={transaction.decision}
               ruleCount={evaluation.ruleOutcomes.length}
+              onOpenDetails={onOpenPir}
             />
             <div className="rounded-lg border p-4">
               <RuleOutcomeList outcomes={evaluation.ruleOutcomes} />

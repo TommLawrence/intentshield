@@ -19,6 +19,7 @@ import type {
 } from "@/lib/mandates/types";
 import { MonoLabel, SectionHeading } from "@/components/intentshield/primitives";
 import { Reveal } from "@/components/intentshield/reveal";
+import { SemanticsChips } from "@/components/intentshield/semantics";
 import {
   ApiError,
   apiFetch,
@@ -454,9 +455,7 @@ export function MandateConsole() {
               </div>
 
               <div className="flex min-h-[14px] items-center border-t px-4 py-2.5">
-                <MonoLabel className="text-[10px] tracking-[0.14em]">
-                  AI INTERPRETS · POLICY DECIDES · PAYPAL EXECUTES
-                </MonoLabel>
+                <SemanticsChips variant="inline" />
               </div>
             </Card>
           </div>

@@ -1,6 +1,7 @@
 import { ShieldCheck } from "lucide-react";
 
 import { MonoLabel } from "@/components/intentshield/primitives";
+import { SemanticsChips } from "@/components/intentshield/semantics";
 
 export function SiteFooter() {
   return (
@@ -16,9 +17,7 @@ export function SiteFooter() {
               IntentShield
             </span>
           </div>
-          <MonoLabel className="mt-2 text-[10px] tracking-[0.16em]">
-            AI INTERPRETS · POLICY DECIDES · PAYPAL EXECUTES
-          </MonoLabel>
+          <SemanticsChips variant="inline" className="mt-2" />
         </div>
 
         <div className="md:text-right">

@@ -188,26 +188,58 @@ function decisionBannerText(decision: PolicyDecision, rulesPassed: number): stri
   }
 }
 
-/** Decision banner: emerald/amber/rose panel with the normative semantics. */
+/** Decision banner: emerald/amber/rose panel with the normative semantics.
+ *
+ * Pass `onOpenDetails` to make the banner an interactive control that opens
+ * the full Payment Intent Record for this decision — one touch, mobile-first
+ * (a compact "tap for the full record" affordance shows below `sm`). Without
+ * it the banner stays the plain passive panel (e.g. inside the record
+ * itself, where the detail is already on screen).
+ */
 export function DecisionBanner({
   decision,
   ruleCount,
   className,
+  onOpenDetails,
 }: {
   decision: PolicyDecision;
   ruleCount: number;
   className?: string;
+  /** Opens this decision's full Payment Intent Record when invoked. */
+  onOpenDetails?: () => void;
 }) {
+  const text = decisionBannerText(decision, ruleCount);
+
+  if (!onOpenDetails) {
+    return (
+      <p
+        className={cn(
+          "rounded-md border px-3 py-2.5 font-data text-[11px] font-medium uppercase tracking-[0.14em]",
+          DECISION_BANNER_STYLES[decision],
+          className
+        )}
+      >
+        {text}
+      </p>
+    );
+  }
+
   return (
-    <p
+    <button
+      type="button"
+      onClick={onOpenDetails}
+      aria-label={`Open the full Payment Intent Record for this ${decision} decision`}
       className={cn(
-        "rounded-md border px-3 py-2.5 font-data text-[11px] font-medium uppercase tracking-[0.14em]",
+        "flex w-full cursor-pointer select-none touch-manipulation flex-col gap-1 rounded-md border px-3 py-2.5 text-left font-data text-[11px] font-medium uppercase tracking-[0.14em] transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring active:translate-y-px",
         DECISION_BANNER_STYLES[decision],
         className
       )}
     >
-      {decisionBannerText(decision, ruleCount)}
-    </p>
+      <span>{text}</span>
+      <span className="text-[9px] tracking-[0.16em] opacity-80 sm:hidden">
+        TAP TO OPEN THE FULL RECORD
+      </span>
+    </button>
   );
 }
 

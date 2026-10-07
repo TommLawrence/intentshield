@@ -44,6 +44,9 @@ USER INTENT → AI AGENT → INTENTSHIELD POLICY → PAYPAL → AUDIT
 
 ## Try the demo (3 minutes)
 
+> **Recording a submission video?** Follow **[DEMO_SCRIPT.md](DEMO_SCRIPT.md)** —
+> a time-coded, mobile-friendly walkthrough with exact taps and say-lines.
+
 1. **Create a mandate** (section *01 · MANDATE CONSOLE*): type or pick an example instruction → **EXTRACT MANDATE** → review the AI's interpretation vs your words → correct anything → **CONFIRM**. Your mandate is now an immutable, versioned authorization.
 2. **Run the agent** (section *02 · AGENT & EXECUTION*): pick your ACTIVE mandate, describe what you want → **RUN AGENT SEARCH**. The AI proposes a product; deterministic code composes the transaction; the policy engine renders its 16-rule verdict.
 3. **Watch the gates work**: from *03 · ADVERSARIAL LAB*, run any scenario (try *H — Duplicate* and *J — Merchant prompt injection*). Every outcome is real, auditable, and lands in the ledger.
