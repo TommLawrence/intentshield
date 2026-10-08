@@ -42,15 +42,6 @@ export function Hero() {
             <SemanticsChips variant="chips" />
           </div>
         </Reveal>
-
-        <Reveal delay={160}>
-          <a
-            href="#agent"
-            className="mt-9 inline-block font-data text-[11px] uppercase tracking-[0.14em] text-muted-foreground underline decoration-border underline-offset-4 transition-colors hover:text-primary hover:decoration-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
-            PHASE 3–7 LIVE — AGENT, POLICY ENGINE, GUARDED PAYPAL EXECUTION →
-          </a>
-        </Reveal>
       </div>
     </section>
   );

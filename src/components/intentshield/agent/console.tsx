@@ -267,10 +267,32 @@ export function AgentConsole() {
                           className="h-11 w-full"
                           aria-describedby="agent-mandate-hint"
                         >
+                          {/* Explicit children: Radix would otherwise portal
+                              the selected item's markup into the trigger.
+                              That portaled markup carries unbreakable
+                              (nowrap) text whose min-content width then
+                              propagates up the layout and blows the card —
+                              and the whole grid track — out past the
+                              viewport. Rendering the row here keeps the
+                              trigger a plain, truncatable single line. */}
                           <SelectValue
                             placeholder="Select an ACTIVE mandate"
-                            className="min-w-0 flex-1"
-                          />
+                            className="flex-1"
+                          >
+                            {selectedMandate ? (
+                              <span className="flex min-w-0 flex-1 items-baseline gap-2">
+                                <span className="min-w-0 flex-1 truncate text-[13px] font-medium">
+                                  {selectedMandate.title}
+                                </span>
+                                <span className="shrink-0 font-data text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                                  {`${formatMoney(
+                                    selectedMandate.maxTotal ?? 0,
+                                    selectedMandate.currency ?? "USD"
+                                  )} · V${selectedMandate.currentVersion}`}
+                                </span>
+                              </span>
+                            ) : undefined}
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent className="max-w-[calc(100vw-1.5rem)]">
                           {mandates.map((item) => (

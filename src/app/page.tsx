@@ -5,7 +5,6 @@ import { Lab } from "@/components/intentshield/lab/lab";
 import { Ledger } from "@/components/intentshield/ledger/ledger";
 import { MandateConsole } from "@/components/intentshield/mandates/console";
 import { ReturnHandler } from "@/components/intentshield/return-handler";
-import { Roadmap } from "@/components/intentshield/roadmap";
 import { RuleCatalog } from "@/components/intentshield/rule-catalog";
 import { SiteFooter } from "@/components/intentshield/site-footer";
 import { SiteHeader } from "@/components/intentshield/site-header";
@@ -26,7 +25,6 @@ export default function Home() {
         <TrustBoundary />
         <RuleCatalog />
         <SystemStatus />
-        <Roadmap />
       </main>
       <SiteFooter />
       <ReturnHandler />

@@ -359,3 +359,25 @@ Stage Summary:
 - origin/main now includes all 5 commits: the 3 prior feature commits plus "Hygiene: restore file modes, untrack runtime artifacts and private working docs" and "README: drop sandbox-platform-specific references".
 - README is free of sandbox/internal-platform references; the public tree no longer exposes the PID file or private working documents.
 - Note for the user: those files remain in already-pushed git history; fully purging them would require rewriting public history (not done unilaterally).
+
+---
+Task ID: 19
+Agent: main (Z.ai Code)
+Task: Targeted responsive/modal cleanup — Agent Brief mobile overflow root fix, placeholder styling, remove PHASE 3–7 line + roadmap (platform and README), concise mandate modal headers, detail-modal action row; then push to GitHub
+
+Work Log:
+- REPRODUCED the reported bug with agent-browser at 390px: selecting the longest mandate in the 'Spend under mandate' dropdown pushed scrollWidth 390 → 654 (page zoom-out). Measured the Agent Brief card at 638px, trigger at 604px.
+- ROOT CAUSE (three stacked causes): (1) Radix Select portals the selected SelectItem's markup into the trigger's value node; that markup contains a nowrap/truncate title whose min-content width propagates up the layout. (2) The shadcn Card (grid item) had no min-width:0, so its content-based automatic minimum size widened the section grid's implicit mobile track. (3) The trigger's `*:data-[slot=select-value]:line-clamp-1` utility conflicted with `flex` (both set display) on the value node.
+- FIXED root causes: (a) ui/card.tsx — Card base gains min-w-0 (canonical grid/flex-child blowout protection, systemic for every card). (b) agent/console.tsx — SelectValue now renders explicit children (title truncate + money/version meta) instead of the portaled item markup, keeping the trigger a plain truncatable single line; when no selection, Radix shows the placeholder as before. (c) ui/select.tsx — line-clamp-1 replaced by overflow-hidden on the select-value (no display conflict), plus data-[placeholder]:opacity-70 for fainter select placeholders.
+- Placeholder styling (globals.css @layer base): input/textarea ::placeholder now opacity 0.55 and font-size 0.9em — verified computed 11.7px/0.55 vs 13px/1.0 values.
+- Removed the 'PHASE 3–7 LIVE — AGENT, POLICY ENGINE, GUARDED PAYPAL EXECUTION →' hero link and the whole 09/ROADMAP section from the platform (page.tsx import+usage, roadmap.tsx deleted). ChainRail PHASE 2–6 labels kept: they describe the live transaction pipeline, not the development roadmap.
+- Mandate modals (review + detail): headers reduced to concise context — classification/status badge, version, ONE-line line-clamp-1 title, correlation/mandate-id micro-line; guidance/status prose moved to sr-only DialogDescription (screen readers keep the context, header no longer repeats what the body shows). Detail footer: REVOKE MANDATE + CLOSE now share one horizontal action row (both h-11, destructive outline vs ghost hierarchy) instead of stacking on mobile.
+- README.md: Roadmap section removed (internal development roadmap — judges don't need it).
+- VERIFIED (agent-browser): 390px — scrollWidth exactly 390 with the longest mandate selected (trigger 324px, card 358px, ellipsis + money meta rendered), 0 overflowing elements page-wide, review dialog 100px header / 504px body, detail dialog one-row footer, VLM screenshot checks pass; 1440px — 0 overflow, brief card exactly 420px in the fixed column, full golden path re-run (mandate select → RUN AGENT SEARCH → POST /api/agent/search 200 → ALLOW all 16 rules → decision banner opens the Payment Intent Record). lint clean; tsc clean (src/).
+
+Stage Summary:
+- The Agent Brief blowout is fixed at its layout roots (portal content, grid auto-minimum, display conflict), not by another breakpoint workaround; selection can no longer widen the card or the page at any viewport.
+- Placeholders now read unmistakably as placeholders (fainter + smaller than values).
+- Internal-only content removed from the public surface: no PHASE status line, no roadmap section in the UI, no roadmap table in README.
+- Mandate modal headers are compact single-purpose context rows; content areas get the reclaimed space; detail-modal actions sit on one row with clear hierarchy.
+- Files changed: ui/card.tsx, ui/select.tsx, agent/console.tsx, hero.tsx, mandates/review-dialog.tsx, mandates/detail-dialog.tsx, app/page.tsx, roadmap.tsx (deleted), globals.css, README.md. No business/API/DB/AI/PayPal logic touched.

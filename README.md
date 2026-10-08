@@ -175,21 +175,6 @@ ARCHITECTURE.md             Full architecture
 SECURITY.md                 Trust boundaries & threat model
 ```
 
-## Roadmap
-
-| Phase | Scope | Status |
-|---|---|---|
-| 0 | Architecture | ✅ complete |
-| 1 | Foundation | ✅ complete |
-| 2 | Intent & mandates — NL → validated structured policy | ✅ complete |
-| 3 | Agent & controlled catalogue (incl. adversarial entries) | ✅ complete |
-| 4 | Policy engine runtime (deterministic ALLOW/REVIEW/BLOCK) | ✅ complete |
-| 5 | PayPal execution (Orders v2, idempotency, honest gating) | ✅ implemented — live sandbox call awaits credentials |
-| 6 | Auditability (payment intent records, activity ledger, correlation view) | ✅ complete |
-| 7 | Adversarial test lab (10 scripted scenarios, live pipeline) | ✅ complete |
-| 8 | Hardening (security, a11y, error-state review) | in progress (this repository) |
-| 9 | Demo & submission (hosted demo, video, final docs) | next |
-
 ## Limitations (honest ones)
 
 - **Sandbox only.** No real-money path exists or is claimed. Not production-ready; no PCI compliance is claimed.

@@ -303,23 +303,24 @@ export function MandateDetailDialog({
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="top-[50%] flex max-h-[85vh] w-[calc(100vw-2rem)] max-w-3xl translate-y-[-50%] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
         <DialogHeader className="shrink-0 gap-1.5 border-b px-4 py-3 sm:gap-2 sm:px-6 sm:py-4">
+          {/* Concise context only — status, version, one-line title. The
+              full instruction lives in the body; the status prose below
+              is kept for screen readers only. */}
           <div className="flex flex-wrap items-center gap-2 pr-11">
             <MandateStatusBadge status={current.status} />
             <span className="font-data text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
               {`V${current.currentVersion}`}
             </span>
+            <span className="ml-auto font-data text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+              {`MANDATE ${current.id.slice(0, 8)}`}
+            </span>
           </div>
-          <DialogTitle className="pr-11 font-display text-lg font-semibold tracking-tight sm:text-xl">
-            {current.title}
+          <DialogTitle className="min-w-0 pr-11 font-display text-lg font-semibold tracking-tight sm:text-xl">
+            <span className="line-clamp-1">{current.title}</span>
           </DialogTitle>
-          <DialogDescription className="text-[13px] leading-snug">
+          <DialogDescription className="sr-only">
             {description}
           </DialogDescription>
-          <p className="font-data text-[10px] uppercase leading-snug tracking-[0.14em] text-muted-foreground">
-            {`MANDATE ${current.id.slice(0, 8)} · CREATED ${formatUtc(
-              current.createdAt
-            )}`}
-          </p>
         </DialogHeader>
 
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4 sm:space-y-6 sm:px-6 sm:py-5">
@@ -454,7 +455,10 @@ export function MandateDetailDialog({
         </div>
 
         <div className="shrink-0 border-t px-4 py-3 sm:px-6">
-          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-end">
+          {/* One horizontal action row: destructive action left-to-right with
+              a clear hierarchy (outline-destructive vs ghost), both at touch
+              height. */}
+          <div className="flex items-center justify-end gap-2.5">
             {current.status === "ACTIVE" ? (
               <AlertDialog
                 open={confirmRevoke}
@@ -464,7 +468,7 @@ export function MandateDetailDialog({
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-11 w-full border-block/40 text-block hover:bg-block/10 hover:text-block sm:w-auto"
+                    className="h-11 border-block/40 text-block hover:bg-block/10 hover:text-block"
                   >
                     <Ban aria-hidden="true" className="size-4" />
                     REVOKE MANDATE
@@ -510,7 +514,7 @@ export function MandateDetailDialog({
             <Button
               type="button"
               variant="ghost"
-              className="h-9 shrink-0 px-3 font-data text-[11px] uppercase tracking-[0.14em] text-muted-foreground hover:text-foreground"
+              className="h-11 shrink-0 px-3 font-data text-[11px] uppercase tracking-[0.14em] text-muted-foreground hover:text-foreground"
               onClick={onClose}
             >
               CLOSE

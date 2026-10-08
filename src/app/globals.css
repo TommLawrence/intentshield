@@ -126,6 +126,16 @@
   main section[id] {
     scroll-margin-top: 5rem;
   }
+  /*
+   * Placeholders must read as placeholders: noticeably fainter than any
+   * entered value and a touch smaller, so an empty field never looks
+   * pre-filled at a glance.
+   */
+  input::placeholder,
+  textarea::placeholder {
+    opacity: 0.55;
+    font-size: 0.9em;
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) {

@@ -349,11 +349,10 @@ export function ReviewDialog({
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="top-[50%] flex max-h-[85vh] w-[calc(100vw-2rem)] max-w-3xl translate-y-[-50%] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
         <DialogHeader className="shrink-0 gap-1.5 border-b px-4 py-3 sm:gap-2 sm:px-6 sm:py-4">
-          {/* pr-11 clears the dialog's compact close (X) button so the
-              classification badge never sits underneath it. */}
+          {/* Concise context only — classification, one-line title,
+              correlation. The full instruction and the guidance prose live in
+              the body; the description is kept for screen readers only. */}
           <div className="flex flex-wrap items-center justify-between gap-2 pr-11">
-            {/* Context label — hidden on mobile where the row would wrap;
-                the classification badge and description carry the context. */}
             <MonoLabel className="hidden sm:block">DRAFT MANDATE REVIEW</MonoLabel>
             <Badge
               variant="outline"
@@ -369,10 +368,10 @@ export function ReviewDialog({
                 : "CLARIFICATION NEEDED"}
             </Badge>
           </div>
-          <DialogTitle className="pr-11 font-display text-lg font-semibold tracking-tight sm:text-xl">
-            {input.title}
+          <DialogTitle className="min-w-0 pr-11 font-display text-lg font-semibold tracking-tight sm:text-xl">
+            <span className="line-clamp-1">{input.title}</span>
           </DialogTitle>
-          <DialogDescription className="text-[13px] leading-snug">
+          <DialogDescription className="sr-only">
             The AI has drafted an interpretation of your instruction. Nothing
             is authorized yet — review it, correct anything, then confirm.
           </DialogDescription>
