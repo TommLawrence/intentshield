@@ -214,7 +214,12 @@ export async function createOrder(input: {
     status: string;
     links?: { rel: string; href: string }[];
   };
-  const approve = order.links?.find((l) => l.rel === "payer" || l.rel === "approve") ?? null;
+  // PayPal returns the buyer-approval link with rel "payer-action" (the
+  // canonical v2 value). Match that first, then tolerate legacy aliases.
+  const approve =
+    order.links?.find((l) => l.rel === "payer-action") ??
+    order.links?.find((l) => l.rel === "payer" || l.rel === "approve") ??
+    null;
   return { paypalOrderId: order.id, status: order.status, approveUrl: approve?.href ?? null };
 }
 
