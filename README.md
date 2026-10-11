@@ -17,7 +17,7 @@ A trust and policy firewall for AI-powered PayPal transactions. Built for the Pa
 ## Try it live
 
 IntentShield runs on the Z Cloud platform at
-**[space-z.ai](https://intentshield.space-z.ai)** — open it there to try the demo yourself.
+**[IntentShield](https://intentshield.space-z.ai)** — open it there to try the demo yourself.
 
 - **No sign-up required.** The AI provider (`zai`, the platform default) and the
   SQLite database are configured out of the box; the catalogue and Adversarial
