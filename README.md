@@ -19,9 +19,14 @@ A trust and policy firewall for AI-powered PayPal transactions. Built for the Pa
 IntentShield runs on the Z Cloud platform at
 **[space-z.ai](https://space-z.ai)** — open it there to try the demo yourself.
 
-- **No sign-up required.** The AI provider (`zai`, the platform default) and the
-  SQLite database are configured out of the box; the catalogue and Adversarial
-  Lab seed themselves on first use.
+- **No sign-up required.** On the platform the AI provider is `zai` (the Z Cloud
+  SDK default) and the SQLite database are configured out of the box; the
+  catalogue and Adversarial Lab seed themselves on first use.
+- **Running it locally?** The platform `zai` provider is unavailable off-cloud,
+  so local runs use any **OpenAI-compatible endpoint** instead — set
+  `AI_PROVIDER=openai` plus `AI_BASE_URL`, `AI_API_KEY` and `AI_MODEL` in `.env`
+  (e.g. DeepSeek, OpenRouter, Ollama, LM Studio). See
+  [LOCAL_SETUP.md §3](LOCAL_SETUP.md#3-create-env-and-configure-the-ai-provider).
 - **PayPal execution needs your own Sandbox credentials.** IntentShield never
   simulates a payment — add your `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET`
   (with `PAYPAL_ENVIRONMENT=SANDBOX`) and a sandbox buyer account, then run the
@@ -57,17 +62,6 @@ USER INTENT → AI AGENT → INTENTSHIELD POLICY → PAYPAL → AUDIT
 6. Every step is written to an append-only audit trail with one correlation ID from intent to capture, surfaced as a human-readable **Payment Intent Record**.
 
 **BLOCK means BLOCK.** A blocked transaction never reaches PayPal capture — the guarded executor has no code path that executes it. The **Adversarial Lab** on the page proves it live with ten scripted attacks (over-budget, smuggled subscriptions, currency games, expired mandates, duplicate/retry double-charges, missing fields, merchant prompt injection…).
-
-## Try the demo (3 minutes)
-
-> **Recording a submission video?** Follow **[DEMO_SCRIPT.md](DEMO_SCRIPT.md)** —
-> a time-coded, mobile-friendly walkthrough with exact taps and say-lines.
-
-1. **Create a mandate** (section *01 · MANDATE CONSOLE*): type or pick an example instruction → **EXTRACT MANDATE** → review the AI's interpretation vs your words → correct anything → **CONFIRM**. Your mandate is now an immutable, versioned authorization.
-2. **Run the agent** (section *02 · AGENT & EXECUTION*): pick your ACTIVE mandate, describe what you want → **RUN AGENT SEARCH**. The AI proposes a product; deterministic code composes the transaction; the policy engine renders its 16-rule verdict.
-3. **Watch the gates work**: from *03 · ADVERSARIAL LAB*, run any scenario (try *H — Duplicate* and *J — Merchant prompt injection*). Every outcome is real, auditable, and lands in the ledger.
-4. **Audit everything** (section *04 · ACTIVITY LEDGER*): filter by decision, open any row for the full Payment Intent Record — intent, mandate, proposal, rule-by-rule evaluation, PayPal status, timeline, audit trail.
-5. **Execute** (needs sandbox credentials — below): an ALLOW (or human-approved REVIEW) transaction offers **EXECUTE VIA PAYPAL SANDBOX** → approve as the sandbox buyer → the capture completes on return and the record turns **CAPTURED**.
 
 ## Tech stack
 
