@@ -8,10 +8,26 @@ A trust and policy firewall for AI-powered PayPal transactions. Built for the Pa
 > natural-language mandate → AI interpretation → strict schema validation → human confirmation →
 > versioned authorization → AI agent search/proposal → deterministic policy evaluation →
 > ALLOW / REVIEW / BLOCK → guarded executor → PayPal Sandbox buyer approval → capture →
-> complete Payment Intent Record + audit trail. The one leg not exercised end-to-end in this
-> environment is the live PayPal sandbox call itself (no credentials present — see
-> [PayPal execution](#paypal-execution)). No PayPal response is ever simulated: without
-> sandbox credentials the execution layer reports an honest, explicit "not configured" state.
+> complete Payment Intent Record + audit trail. The complete chain has been exercised against a
+> live PayPal Sandbox order ($884.92, captured). No PayPal response is ever simulated: without
+> sandbox credentials the execution layer reports an honest, explicit "not configured" state —
+> which is the expected behaviour on a fresh deployment (see [Running on the Z Cloud
+> platform](LOCAL_SETUP.md#9-running-on-the-z-cloud-platform-judges--reviewers)).
+
+## Try it live
+
+IntentShield runs on the Z Cloud platform at
+**[space-z.ai](https://space-z.ai)** — open it there to try the demo yourself.
+
+- **No sign-up required.** The AI provider (`zai`, the platform default) and the
+  SQLite database are configured out of the box; the catalogue and Adversarial
+  Lab seed themselves on first use.
+- **PayPal execution needs your own Sandbox credentials.** IntentShield never
+  simulates a payment — add your `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET`
+  (with `PAYPAL_ENVIRONMENT=SANDBOX`) and a sandbox buyer account, then run the
+  full golden path. Without credentials the execute step answers an honest
+  `409 PAYPAL_NOT_CONFIGURED`. See [§9 of LOCAL_SETUP.md](LOCAL_SETUP.md#9-running-on-the-z-cloud-platform-judges--reviewers).
+- **Source code:** [github.com/TommLawrence/intentshield](https://github.com/TommLawrence/intentshield).
 
 ---
 
@@ -178,7 +194,7 @@ SECURITY.md                 Trust boundaries & threat model
 ## Limitations (honest ones)
 
 - **Sandbox only.** No real-money path exists or is claimed. Not production-ready; no PCI compliance is claimed.
-- **The live PayPal sandbox leg was not exercised in this environment** (no credentials available). Everything up to the PayPal HTTP call — policy, gates, idempotency, breakdown construction, return-URL handling, capture preconditions — is implemented and the not-configured path is the verified default. Adding credentials is the only step needed to run the live leg.
+- **The live PayPal sandbox leg has been exercised** against a real Sandbox order ($884.92, captured end-to-end). On a fresh deployment without credentials the execute step answers an honest `409 PAYPAL_NOT_CONFIGURED` — that is the designed behaviour, not an untested path. Adding sandbox credentials is the only step needed to run the live leg.
 - **Auth is intentionally lightweight** for the hackathon MVP (demo identity); authorization *boundaries* inside the system (USER / AGENT / POLICY_ENGINE / PAYMENT_EXECUTOR / SYSTEM) are enforced structurally — see SECURITY.md.
 - **No webhooks yet** — deliberately deferred until a stable HTTPS endpoint exists; capture state is verified synchronously against PayPal instead.
 - **Tests are not bundled yet** — the Adversarial Lab serves as the live, in-app scenario suite (ten attacks through the real pipeline); unit/integration tests land in a follow-up pass against the contracts defined here.

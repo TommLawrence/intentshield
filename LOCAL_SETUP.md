@@ -178,3 +178,89 @@ bun run build       # production build (standalone)
 | Database errors | Delete `db/custom.db` and re-run `bun run setup` (fresh database; history is not precious in the prototype). |
 | `409 PAYPAL_NOT_CONFIGURED` on execute | Expected when PayPal credentials are absent — that is the honest gate, not a bug. Complete step 4 and retry from the ledger. |
 | Port 3000 already in use | Stop the other process or run `bunx next dev -p 3001` (PayPal return URLs then use that port too). |
+
+---
+
+## 9. Running on the Z Cloud platform (judges & reviewers)
+
+This section documents how to run IntentShield on the hosted platform when
+PayPal Sandbox credentials are **not** pre-configured — the typical case for a
+demo or hackathon submission, where each reviewer supplies their own sandbox
+account.
+
+### What already works without configuration
+
+- **AI provider** — the platform default (`AI_PROVIDER=zai`, the Z Cloud SDK)
+  is wired and needs no API key. Intent extraction and agent search work out of
+  the box.
+- **Database** — SQLite is initialized by `bun run setup`; the catalogue and
+  Adversarial Lab fixtures seed themselves on first use.
+- **Policy engine** — 16 deterministic rules, no external dependencies.
+- **Everything up to the PayPal HTTP call** — mandate creation, agent search,
+  policy evaluation, the guarded executor, idempotency, the Payment Intent
+  Record and the audit trail all run without PayPal configured.
+
+### What each reviewer must configure (3 values)
+
+The only leg that needs credentials is PayPal execution. IntentShield **never
+simulates** a PayPal response — without credentials the execute endpoint
+returns an honest `409 PAYPAL_NOT_CONFIGURED` and creates no order.
+
+1. **Create a PayPal Sandbox app** at
+   <https://developer.paypal.com/dashboard/applications> (Sandbox →
+   Apps & Credentials → create a **Merchant** app).
+2. **Copy the Client ID and Client Secret** into the platform `.env`:
+   ```dotenv
+   PAYPAL_CLIENT_ID=your-sandbox-client-id
+   PAYPAL_CLIENT_SECRET=your-sandbox-client-secret
+   PAYPAL_ENVIRONMENT=SANDBOX
+   ```
+3. **Create a sandbox buyer account** in the same dashboard (Sandbox →
+   Accounts) — use it to approve payments during the demo.
+
+> **Leave `PAYPAL_CLIENT_SECRET` out of any shared config or commit.** It is
+> server-side only; the client never sees it. The `.env*` pattern in
+> `.gitignore` already protects it.
+
+### The honest-gate behaviour (by design)
+
+| Action | Without PayPal creds | With PayPal creds |
+|---|---|---|
+| `POST /api/transactions/:id/execute` | `409 PAYPAL_NOT_CONFIGURED` — no order created | Creates a real Sandbox order, returns the approval link |
+| `POST /api/transactions/:id/capture` | `409 NO_ORDER` | Captures after buyer approval |
+| `/api/health` | `"paypal": {"configured": false, "environment": "SANDBOX"}` | `"paypal": {"configured": true, "environment": "SANDBOX"}` |
+
+The health endpoint reports the **actual** state — never modified to make a
+test pass. Reviewers can verify honesty by checking it before and after
+adding credentials.
+
+### Running the golden path (5 minutes)
+
+1. **Section 01 · Mandate Console** — type an instruction (e.g. *"Buy me a
+   business laptop for work, max $900, new only, no subscriptions, shipping
+   under $40"*) → **EXTRACT MANDATE** → review the draft → **CONFIRM**.
+   The mandate becomes `ACTIVE` with an immutable version 1.
+2. **Section 02 · Agent & Execution** — select the active mandate → type
+   *"find me a laptop"* → **RUN AGENT SEARCH**. The agent proposes a catalogue
+   SKU; the deterministic policy engine evaluates it. A compliant proposal
+   returns **ALLOW**.
+3. **EXECUTE VIA PAYPAL SANDBOX** — a PayPal approval panel opens. Approve with
+   the sandbox buyer account.
+4. On return the app captures the payment and the record turns **CAPTURED**.
+5. **Section 04 · Activity Ledger** — open the row for the full Payment Intent
+   Record: intent, mandate, proposal, all 16 rule outcomes, PayPal order and
+   capture IDs, timeline and audit trail.
+
+### Safety checks (no credentials required)
+
+**Section 03 · Adversarial Lab** runs ten scripted attacks through the real
+pipeline with no PayPal needed:
+
+- **B — Amount above budget** → `BLOCK` (R-01)
+- **D — Recurring subscription smuggled in** → `BLOCK` (R-04)
+- **F — Currency mismatch** → `BLOCK` (R-03)
+- **H — Duplicate / retry double-charge** → `BLOCK` (R-12)
+- **J — Merchant prompt injection** → `REVIEW` (R-13), escalated to a human
+
+Every blocked attempt is recorded in the audit trail — nothing is silently
+dropped.
