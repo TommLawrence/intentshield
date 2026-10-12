@@ -505,3 +505,22 @@ Stage Summary:
 - Push is blocked by GITHUB ACCOUNT FLAG — not the token, not the repo setting, not sandbox access. Account exists and authenticates but is hidden from the public internet (user object 404 from independent vantage).
 - Recovery: user appeals the flag via GitHub Support; once unflagged, the push fires immediately (local commits ready; token grant may then also need "All repositories" or a classic PAT if the 404 persists post-unflag — distinguishable then).
 - No data loss anywhere: work is committed locally; the deployed judges' app never depended on GitHub.
+
+---
+Task ID: 24
+Agent: main (Z.ai Code)
+Task: Third push attempt (token with expanded permissions); git bundle backup + local-agent handoff prompt
+
+Work Log:
+- User expanded the fine-grained token to essentially every repository permission category (Contents included) and asked for another push. Result: push → "Repository not found"; token GET /repos/TommLawrance/intentshield → 404. Permissions cannot override an account-level flag.
+- Sealed the flag diagnosis with a positive control from the independent Z.ai vantage, same moment, same method: api.github.com/users/octocat → login "octocat" (visible) vs api.github.com/users/TommLawrance → "Not Found" (hidden). Flag still active.
+- .env inventory (key NAMES only, no values printed): DATABASE_URL, PAYPAL_ENVIRONMENT, AI_PROVIDER, AI_MODEL — no PayPal credentials, no Channel3 key in the sandbox; the app here honestly runs its PAYPAL_NOT_CONFIGURED / CHANNEL3_NOT_CONFIGURED gates, consistent with design.
+- CREATED AND VERIFIED THE BUNDLE: intentshield-backup.bundle at project root — 2.8 MB, contains refs/heads/main at 2e3c76e, "The bundle records a complete history", `git bundle verify` OK. SHA-256: 46876d98853b197b2e9bb9e367a7350ab705e21712e698b624d96802005197da. Added to .git/info/exclude (local-only ignore; tracked .gitignore untouched; tree stays clean). By construction the bundle holds ONLY committed content — .env, node_modules, .next excluded; no secret leakage possible.
+- Size comparison vs a platform "download project" export: bundle 2.8 MB vs project directory 1.5 GB (node_modules 1.2 G + .next 216 M). Also: whether the platform export includes the .git directory is unverifiable from inside the sandbox — if it doesn't, commit history would be lost; the bundle removes all doubt.
+- Delivered the local-agent handoff prompt to the user: sha256 verification → read-only inventory → safety branch → fetch from bundle → inspect (expect exactly the 6 commits) → ff-only merge (fallback: --no-ff merge preferring the bundle side for the 12 touched files: paypal/client.ts, transactions/service.ts, channel3/{types,client,market-service}.ts, api/market/search/route.ts, agent/market-panel.tsx, agent/console.tsx, system-status.tsx, lib/env.ts, api/health/route.ts, .env.example, README.md, worklog.md) → push → verify origin/main tip = 2e3c76e. Hard rules: no force-push/rebase/amend, no deletions, no reset --hard over local work, no .env printing; on "Repository not found" at push: stop, appeal via support.github.com, retest via api.github.com/users/TommLawrance in a browser.
+- Judges' app verified healthy throughout (/api/health 200); no app code was touched this task — only git plumbing, worklog, and the bundle.
+
+Stage Summary:
+- All 6 commits (6f0e46c audit, b739e15 Channel3, 501786f merge, d8838b1/d04ec61/2e3c76e worklogs) are packaged in a verified, checksummed, 2.8 MB single-file bundle at the project root, ready to download.
+- Push remains blocked solely by the GitHub account flag — now proven with a positive control from an independent network. Token permissions are not the problem and cannot fix it.
+- Recovery path handed to the user: download bundle → run the provided local-agent prompt on their machine → push lands once the flag is lifted (their own credentials were never the issue). After recovery: delete both chat-pasted tokens, mint one fresh token.
