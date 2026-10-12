@@ -446,3 +446,23 @@ Stage Summary:
 - The architecture story extends cleanly: AI interprets (now grounded in Channel3's 100M-product live market), policy decides (the same 16-rule engine judges real merchant offers, read-only), PayPal executes (unchanged, catalogue-only until Channel3 checkout ships — stated openly in UI, README and limitations).
 - Honest-gate pattern mirrored from PayPal: no key → 409 CHANNEL3_NOT_CONFIGURED, no fake market data ever.
 - To go live: add CHANNEL3_API_KEY=<key> to .env (hot-reloads in dev; documented in .env.example + README). One search = one Channel3 credit (free tier 1,000/month; hackathon promo 20,000).
+
+---
+Task ID: 23
+Agent: main (Z.ai Code)
+Task: Push Task-21/22 commits (APIMatic audit fix + Channel3 integration) to origin/main using the user-supplied GitHub PAT; remote had advanced with the user's own README edit
+
+Work Log:
+- git status at session start: local main 2 commits ahead of origin/main (6f0e46c audit, b739e15 Channel3), tree clean — Task 22's worklog line "committed and pushed" was premature: the push had actually failed on auth; that failure is what this task resolves.
+- Pre-push safety: verified both commits' file lists (12 files, all source/docs); .env gitignored and untracked (0 entries in index); secret scan of origin/main..HEAD found only empty placeholders (PAYPAL_CLIENT_SECRET= context in .env.example, CHANNEL3_API_KEY= empty placeholder) and code/docs references — no real secret values in the push range.
+- Fetched origin before pushing: remote had advanced 0be2e67 → e7090f0 with the user's own commits (b4fa953 "README: add PayPal Sandbox verification section" documenting the $884.92 sandbox checkout + merge e7090f0). README.md only, zero code changes.
+- Conflict analysis before merging: remote inserts at README L14–20 (before "## Try it live"); local Channel3 hunks at L72/118/137/194 — zero textual overlap. Merged cleanly with merge commit 501786f (ort strategy, auto-merge, no conflicts). Post-merge README integrity verified: "PayPal Sandbox Verification" section present, "Live market grounding (Channel3)" section present, both CHANNEL3_API_KEY references present. Local main then 3 commits ahead of origin/main.
+- PUSH ATTEMPT with the user-supplied fine-grained PAT (inline URL only — never persisted to .git/config, never committed): REJECTED — "remote: Repository not found".
+- Root cause, proven via GitHub API: token IS valid (GET /user → 200, login=TommLawrance, id 33424506; rate_limit → core 5000/5000). But GET /repos/TommLawrance/intentshield with the token → 404 Not Found; git ls-remote (read-only git op) with the token → "Repository not found" while the same repo fetches fine anonymously. Same 404 for other repos (rea, roots). /user/repos lists the account's public repos with role_name:null — metadata listing only, not grants. Diagnosis: the fine-grained PAT authenticates but carries NO repository grant for intentshield and no Contents:write — GitHub hides repos from a token that lacks grants, returning "Repository not found" on push. No alternate route exists on this machine: no ~/.ssh directory, no credential.helper configured, no ~/.git-credentials.
+- BLOCKED pending user action on GitHub's site (cannot be done from the sandbox): edit the PAT at Settings → Developer settings → Personal access tokens → Fine-grained tokens → select this token → Repository access = "Only select repositories" → add TommLawrance/intentshield (or "All repositories"); Permissions → Repository permissions → Contents = "Read and write" (Metadata read-only is auto-required). Editing an existing fine-grained token's grants does NOT regenerate the secret — the same token string becomes usable immediately.
+- Dev server untouched throughout (the merge changed README.md only — not compiled app code); judges' link verified healthy during this session (/api/health 200; recent log lines all 200 for /api/transactions, /api/lab/scenarios, /api/mandates, /api/health).
+
+Stage Summary:
+- Everything is committed and ready locally: 6f0e46c (APIMatic audit fixes), b739e15 (Channel3 live-market grounding), 501786f (clean merge with the user's README PayPal-Sandbox-verification section). The push is blocked ONLY by the PAT's missing repo grant + Contents:write permission.
+- No secret was exposed or committed; the PAT was used solely in the inline push URL and API diagnostics.
+- Next step: once the token's grants are edited on GitHub, a single `git push` publishes all three commits; no further local work required.
