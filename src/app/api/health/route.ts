@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getEnv, isPayPalConfigured } from "@/lib/env";
+import { getEnv, isChannel3Configured, isPayPalConfigured } from "@/lib/env";
 import { POLICY_ENGINE_VERSION, POLICY_RULES } from "@/lib/policy/types";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +31,9 @@ export async function GET() {
       paypal: {
         configured: isPayPalConfigured(),
         environment: env.PAYPAL_ENVIRONMENT,
+      },
+      channel3: {
+        configured: isChannel3Configured(),
       },
       ai: { provider: env.AI_PROVIDER, model: env.AI_MODEL ?? null },
       policyEngine: { version: POLICY_ENGINE_VERSION, rules: POLICY_RULES.length },

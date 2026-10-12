@@ -72,6 +72,7 @@ USER INTENT → AI AGENT → INTENTSHIELD POLICY → PAYPAL → AUDIT
 | Database | Prisma ORM over SQLite (single-file dev DB — model maps 1:1 to a future Postgres deploy) |
 | Validation | Zod (environment, AI output, API contracts — `.strict()` everywhere) |
 | AI | Provider abstraction (`src/lib/ai`) — two interchangeable server-side providers: `zai` (Z Cloud SDK) and `openai` (any OpenAI-compatible HTTP endpoint) |
+| Live market | [Channel3](https://trychannel3.com) product search API (100M+ real products) — advisory live-market grounding, strictly read-only |
 | Payments | PayPal **Orders v2 REST API**, server-side only (OAuth client-credentials, `PayPal-Request-Id` idempotency) |
 | Runtime | Node 24 / Bun |
 
@@ -118,6 +119,7 @@ no manual seed step.
 | `AI_BASE_URL` | for `openai` | Endpoint base including the version segment, e.g. `http://localhost:11434/v1` |
 | `AI_API_KEY` | for `openai` | Bearer key for the endpoint (any non-empty value for local servers) |
 | `AI_MODEL` | for `openai` | Model name the endpoint expects, e.g. `llama3.1` (audit label for `zai`) |
+| `CHANNEL3_API_KEY` | for live market | Server-side Channel3 key — powers the LIVE MARKET panel (see below) |
 
 ### PayPal execution
 
@@ -136,6 +138,21 @@ and idempotent capture (`PayPal-Request-Id = capture_<executionId>`).
 Without credentials the execute endpoint returns `409 PAYPAL_NOT_CONFIGURED` with setup
 instructions, records a `PAYPAL_NOT_CONFIGURED` audit event, and creates **nothing** — the
 prototype never fakes a PayPal result.
+
+### Live market grounding (Channel3)
+
+The agent brief can ground any request in the **real live market**: `POST /api/market/search`
+queries Channel3's product graph (100M+ products, thousands of real merchants, live prices)
+and runs the **same deterministic policy engine** against each product's best offer — merchant
+allowlists, amount ceilings, currency and condition rules applied to real-world offers.
+
+Strictly advisory and read-only: no transaction record, agent action or audit event is
+created, and nothing on this path can reach PayPal. Channel3's merchant checkout is coming
+soon — external retailers are not payable through this prototype; the controlled catalogue
+remains the agent's only payable world.
+
+Without `CHANNEL3_API_KEY` the endpoint returns `409 CHANNEL3_NOT_CONFIGURED` and the panel
+says so honestly — market data is never simulated.
 
 ## The policy engine (16 rules, deterministic)
 
@@ -194,6 +211,7 @@ SECURITY.md                 Trust boundaries & threat model
 - **Tests are not bundled yet** — the Adversarial Lab serves as the live, in-app scenario suite (ten attacks through the real pipeline); unit/integration tests land in a follow-up pass against the contracts defined here.
 - Tax is a flat 8% of subtotal (integer minor units) — a documented demo simplification.
 - Money assumes 2-decimal currencies (USD/EUR). Zero-decimal currencies are out of MVP scope.
+- The live-market panel is advisory only — it never creates a transaction or reaches PayPal, and external-retailer purchases are out of scope until Channel3's merchant checkout ships.
 
 ## Security
 

@@ -11,6 +11,9 @@ const envSchema = z.object({
   PAYPAL_CLIENT_ID: z.string().optional(),
   PAYPAL_CLIENT_SECRET: z.string().optional(),
   PAYPAL_ENVIRONMENT: z.enum(["SANDBOX", "LIVE"]).default("SANDBOX"),
+  // Channel3 live product search (live-market grounding). When absent, the
+  // market panel reports an honest "not configured" state — never fake data.
+  CHANNEL3_API_KEY: z.string().optional(),
   AI_PROVIDER: z.string().default("zai"),
   // OpenAI-compatible local provider (AI_PROVIDER=openai). All three are
   // required together; the provider reports missing names honestly and
@@ -41,4 +44,8 @@ export function getEnv(): Env {
 export function isPayPalConfigured(): boolean {
   const env = getEnv();
   return Boolean(env.PAYPAL_CLIENT_ID && env.PAYPAL_CLIENT_SECRET);
+}
+
+export function isChannel3Configured(): boolean {
+  return Boolean(getEnv().CHANNEL3_API_KEY);
 }

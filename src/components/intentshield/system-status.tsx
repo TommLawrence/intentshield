@@ -19,6 +19,7 @@ interface HealthResponse {
   phase: string;
   database: { connected: boolean };
   paypal: { configured: boolean; environment: "SANDBOX" | "LIVE" };
+  channel3: { configured: boolean };
   ai: { provider: string; model: string };
   policyEngine: { version: string; rules: number };
   timestamp: string;
@@ -43,6 +44,9 @@ function isHealthResponse(value: unknown): value is HealthResponse {
     typeof candidate.paypal.configured === "boolean" &&
     (candidate.paypal.environment === "SANDBOX" ||
       candidate.paypal.environment === "LIVE") &&
+    typeof candidate.channel3 === "object" &&
+    candidate.channel3 !== null &&
+    typeof candidate.channel3.configured === "boolean" &&
     typeof candidate.ai === "object" &&
     candidate.ai !== null &&
     typeof candidate.ai.provider === "string" &&
@@ -242,6 +246,7 @@ export default function SystemStatus() {
                 <StatusRowSkeleton />
                 <StatusRowSkeleton />
                 <StatusRowSkeleton />
+                <StatusRowSkeleton />
               </div>
             ) : null}
 
@@ -300,6 +305,24 @@ export default function SystemStatus() {
                     state.data.paypal.configured
                       ? undefined
                       : "Set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET in .env — execution stays honestly unavailable until then"
+                  }
+                />
+                <StatusRow
+                  label="CHANNEL3 LIVE MARKET"
+                  value={
+                    state.data.channel3.configured
+                      ? "CONFIGURED"
+                      : "NOT CONFIGURED"
+                  }
+                  valueClassName={
+                    state.data.channel3.configured
+                      ? "text-allow"
+                      : "text-review"
+                  }
+                  hint={
+                    state.data.channel3.configured
+                      ? undefined
+                      : "Set CHANNEL3_API_KEY in .env to ground searches in the live market — IntentShield never fakes market data"
                   }
                 />
                 <StatusRow

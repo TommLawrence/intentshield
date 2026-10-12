@@ -41,6 +41,7 @@ import {
   formatApiErrorText,
 } from "@/components/intentshield/agent/shared";
 import { ExecutionControls } from "@/components/intentshield/agent/execution-controls";
+import { MarketPanel } from "@/components/intentshield/agent/market-panel";
 import { PirDialog } from "@/components/intentshield/ledger/pir-dialog";
 import { dispatchLedgerRefresh } from "@/components/intentshield/ledger/shared";
 
@@ -478,6 +479,15 @@ export function AgentConsole() {
               )}
             </Card>
           </div>
+        </Reveal>
+
+        {/* Live market grounding — Channel3, advisory only (shares the
+            mandate selection with the agent brief above). */}
+        <Reveal delay={120} className="mt-6">
+          <MarketPanel
+            mandate={selectedMandate ?? null}
+            agentRequest={request}
+          />
         </Reveal>
       </div>
 
