@@ -14,6 +14,20 @@ A trust and policy firewall for AI-powered PayPal transactions. Built for the Pa
 > which is the expected behaviour on a fresh deployment (see [Running on the Z Cloud
 > platform](LOCAL_SETUP.md#9-running-on-the-z-cloud-platform-judges--reviewers)).
 
+## PayPal Sandbox Verification
+
+IntentShield has successfully completed a buyer-approved PayPal Sandbox checkout
+for **$884.92 USD**. The application's activity ledger recorded the transaction
+as completed.
+
+This verifies the successful checkout and ledger-recording path for this test.
+Seller-side dashboard confirmation should be documented separately once verified.
+
+**Environment:** PayPal Sandbox. No real money was involved.
+
+Payment execution requires valid server-side Sandbox credentials configured through
+environment variables. Credentials are not committed to the repository.
+
 ## Try it live
 
 IntentShield runs on the Z Cloud platform at
