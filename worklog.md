@@ -466,3 +466,21 @@ Stage Summary:
 - Everything is committed and ready locally: 6f0e46c (APIMatic audit fixes), b739e15 (Channel3 live-market grounding), 501786f (clean merge with the user's README PayPal-Sandbox-verification section). The push is blocked ONLY by the PAT's missing repo grant + Contents:write permission.
 - No secret was exposed or committed; the PAT was used solely in the inline push URL and API diagnostics.
 - Next step: once the token's grants are edited on GitHub, a single `git push` publishes all three commits; no further local work required.
+
+---
+Task ID: 23 (continuation)
+Agent: main (Z.ai Code)
+Task: Push retry with the user's SECOND fine-grained PAT; full root-cause isolation
+
+Work Log:
+- User supplied a new PAT after the first push failure. Verified identity: authenticates as TommLawrance (GET /user 200). Crucially, this token CAN read third-party public repos (GET /repos/octocat/Hello-World → 200), proving the token itself is well-formed and has working Metadata read — better health than token #1 showed any evidence of.
+- Token still cannot see intentshield: GET /repos/TommLawrance/intentshield → 404; git ls-remote → "Repository not found" (tested in all auth-URL forms: x-access-token:TOKEN, TOKEN-as-username, TommLawrance:TOKEN). Push → "Repository not found". Same for token #1. Conclusion for BOTH tokens: created without a repository grant covering intentshield.
+- DISCOVERED A SECOND, SEPARATE EVENT: the repository's public visibility changed mid-session. At session start an anonymous `git fetch origin` really pulled e7090f0 (user's README commits) — repo was public then. Now: repo website 404s to the world (not rate-limited — website path), git smart-HTTP endpoint returns 401 to anonymous access (private-repo behavior), while the earlier intermittent anonymous successes/failures fit CDN-cached public responses expiring. So the repo went private (or was deleted/renamed+locked) during the same window in which the user was on GitHub creating the new PAT.
+- Eliminated alternatives: no hidden credentials on the machine (no GIT_*/GITHUB_* env, no /etc/gitconfig, no askpass, no credential helper, no ~/.ssh); anonymous API 403s are the shared sandbox IP's 60/hr rate limit (exhausted, 0 remaining — different quota from the token's 5000); not a rename (API would 301, not 404); not a transfer (website with -L still 404s).
+- Date check: Oct 13, 2026 — well past the Jan 15, 2026 hackathon deadline; repo-visibility implications are the user's call, but flagged: public Devpost/sponsor links to github.com/TommLawrance/intentshield currently 404.
+- Judges' live app UNAFFECTED: intentshield.space-z.ai serves from this sandbox's dev server (port 3000), not from GitHub; /api/health 200 throughout. All work is safe locally: 4 commits on main ahead of origin (6f0e46c, b739e15, 501786f merge, d8838b1 worklog), tree clean.
+
+Stage Summary:
+- Push remains blocked by ONE token setting: Repository access does not include intentshield (nor "All repositories"). The token's identity, auth, and public-read are all proven working — only the repo grant is missing. Fix (user, on github.com): Settings → Developer settings → Personal access tokens → Fine-grained tokens → this token → Repository access → "All repositories" (or select intentshield) → keep Contents: Read and write → Update. The token string stays valid; no re-paste needed.
+- Independent discovery: the repo is now private/deleted from the public web though it was public at session start — if accidental, Settings → General → Danger Zone → Change visibility → Public restores judge/sponsor access; if deliberate, pushes work identically against private repos once the token grant exists.
+- Recommendation given: delete token #1 (pasted in chat, zero grants, useless). All local work remains committed and intact; a single push publishes everything once the grant is added.
