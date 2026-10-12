@@ -381,3 +381,22 @@ Stage Summary:
 - Internal-only content removed from the public surface: no PHASE status line, no roadmap section in the UI, no roadmap table in README.
 - Mandate modal headers are compact single-purpose context rows; content areas get the reclaimed space; detail-modal actions sit on one row with clear hierarchy.
 - Files changed: ui/card.tsx, ui/select.tsx, agent/console.tsx, hero.tsx, mandates/review-dialog.tsx, mandates/detail-dialog.tsx, app/page.tsx, roadmap.tsx (deleted), globals.css, README.md. No business/API/DB/AI/PayPal logic touched.
+
+---
+Task ID: 20
+Agent: main (Z.ai Code)
+Task: Pull remote GitHub updates 'as is' and merge with local state conflict-free; keep the live preview link functional for judges ahead of submission
+
+Work Log:
+- Fetched origin: remote main had advanced be4d5ba → e9edfda with 7 new commits (71d282e Task-19 responsive/modal fixes, e61643e PayPal approval-URL fix matching rel 'payer-action', 24dd469 judge-facing LOCAL_SETUP.md + README 'Try it live' section, 81f7042/e190e05 demo-link updates, def818d demo-script section removal, e9edfda merge commit).
+- Diffed both sides before touching anything: local-only commit 90c6eb9 was content-identical to remote be4d5ba (0 insertions/0 deletions — only spurious 755 file modes); every working-tree Task-19 file was already identical to remote 71d282e (all | 0 diffs). No unique local content existed → clean sync, zero conflicts by construction.
+- Safety nets before merging: git stash push -u (captured the entire local Task-19 working tree + the stray untracked '--full-page' junk file, removing it from the tree) and backup branch backup-premerge-90c6eb9.
+- git reset --hard origin/main: local main now exactly e9edfda, clean tree, rev-list origin/main...main = 0 0. Correct 644 file modes preserved (the local sibling commit had re-marked 152 files executable).
+- Spot-verified merged content: README 'Try it live' → intentshield.space-z.ai present; 0 roadmap mentions; roadmap.tsx deleted; paypal/client.ts payer-action fix at lines 217-220; LOCAL_SETUP.md §9 judge guide present.
+- VERIFIED (agent-browser): 1440×900 — page renders with all four sections (MANDATE CONSOLE, AGENT & EXECUTION, ADVERSARIAL LAB, ACTIVITY LEDGER), no PHASE 3–7 line, no roadmap, 0 page errors, clean console; 390×844 — scrollWidth exactly 390, 0 overflowing elements, API-driven content renders. Dev log: /api/health, /api/mandates, /api/transactions, /api/lab/scenarios all 200 after fresh compile of the merged tree. Dev server never restarted — zero downtime on the judges' link.
+
+Stage Summary:
+- Local and GitHub are now one identical state (e9edfda) — remote taken 'as is' per instruction; the only local-only content was stale or already upstream.
+- The judges' preview link (port 3000) stayed live throughout and serves the fully merged code: Task-19 responsive fixes + the PayPal payer-action approval-URL fix + judge-facing docs.
+- Safety artifacts left on disk only (not pushed): stash 'pre-sync safety' and branch backup-premerge-90c6eb9.
+- Nothing in business/API/DB/AI/PayPal logic was hand-edited; the only code change absorbed was the user's own e61643e PayPal fix.
