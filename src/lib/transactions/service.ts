@@ -831,13 +831,23 @@ export async function captureTransaction(transactionId: string, body: unknown): 
     throw new MandateApiError(502, "PAYPAL_ERROR", `PayPal capture failed: ${message}`);
   }
 
-  const completed = capture.status === "COMPLETED";
+  // PayPal's ORDER status alone is not proof of payment: a COMPLETED order
+  // can carry a DECLINED capture (Orders v2 Order model: "Check the payment
+  // status in purchase_units[].payments.captures[].status before fulfilling
+  // the order"). Only a capture-level COMPLETED record settles the transaction.
+  const completed =
+    capture.status === "COMPLETED" && capture.captureId !== null && capture.captureStatus === "COMPLETED";
   await db.payPalOrder.update({
     where: { id: order.id },
     data: {
       status: completed ? "CAPTURED" : "FAILED",
       captureId: capture.captureId,
-      rawSnapshot: JSON.stringify({ id: capture.paypalOrderId, status: capture.status, captureId: capture.captureId }),
+      rawSnapshot: JSON.stringify({
+        id: capture.paypalOrderId,
+        status: capture.status,
+        captureId: capture.captureId,
+        captureStatus: capture.captureStatus,
+      }),
     },
   });
   await db.paymentIntent.update({
@@ -863,6 +873,7 @@ export async function captureTransaction(transactionId: string, body: unknown): 
       reference: intent.reference,
       paypalOrderId: order.paypalOrderId,
       captureId: capture.captureId,
+      captureStatus: capture.captureStatus,
       amountMinor: tx.total,
       currency: tx.currency,
       status: capture.status,

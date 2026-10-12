@@ -50,7 +50,8 @@ export interface PayPalOrderResult {
 export interface PayPalCaptureResult {
   paypalOrderId: string;
   captureId: string | null;
-  status: string; // COMPLETED | DECLINED | ...
+  status: string; // order-level status: COMPLETED | ...
+  captureStatus: string | null; // capture-level status: COMPLETED | DECLINED | ...
 }
 
 function baseUrl(): string {
@@ -94,6 +95,11 @@ interface PayPalErrorBody {
 }
 
 async function raiseApiError(res: Response, operation: string): Promise<never> {
+  // Canonical PayPal token-cache semantics: a 401 invalidates the cached
+  // access token so the NEXT call re-authenticates (the failing request itself
+  // is not retried). Without this, a server-side token revocation would fail
+  // every call until the token's natural expiry.
+  if (res.status === 401) cachedToken = null;
   let message = `PayPal ${operation} failed`;
   let debugId = res.headers.get("paypal-debug-id");
   try {
@@ -231,6 +237,10 @@ export async function captureOrder(orderId: string, executionId: string): Promis
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
+      // Orders v2 defaults to Prefer: return=minimal — id, status and links
+      // only. The capture id and capture-level status live in the full
+      // representation, so request it explicitly.
+      Prefer: "return=representation",
       "PayPal-Request-Id": `capture_${executionId}`,
     },
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -247,6 +257,7 @@ export async function captureOrder(orderId: string, executionId: string): Promis
     paypalOrderId: captured.id,
     captureId: capture?.id ?? null,
     status: captured.status,
+    captureStatus: capture?.status ?? null,
   };
 }
 
