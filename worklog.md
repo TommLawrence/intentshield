@@ -524,3 +524,24 @@ Stage Summary:
 - All 6 commits (6f0e46c audit, b739e15 Channel3, 501786f merge, d8838b1/d04ec61/2e3c76e worklogs) are packaged in a verified, checksummed, 2.8 MB single-file bundle at the project root, ready to download.
 - Push remains blocked solely by the GitHub account flag — now proven with a positive control from an independent network. Token permissions are not the problem and cannot fix it.
 - Recovery path handed to the user: download bundle → run the provided local-agent prompt on their machine → push lands once the flag is lifted (their own credentials were never the issue). After recovery: delete both chat-pasted tokens, mint one fresh token.
+
+---
+Task ID: 25
+Agent: main (Z.ai Code)
+Task: Push attempt #3 (user's third PAT); user's local tests prove flag lifted for normal traffic — sandbox IP remains blocked; bundle made visible in download/ + direct URL
+
+Work Log:
+- USER'S LOCAL TEST RESULTS (their machine, anonymous curl): github.com/TommLawrance → HTTP 200; api.github.com/users/TommLawrance → 200; api.github.com/repos/TommLawrance/intentshield → 200. The account/repo is PUBLIC and visible to normal traffic again — the flag was lifted.
+- Their second PAT now returns 401 "Requires authentication" (was 200 earlier): GitHub auto-revokes tokens on flagged accounts — expected flag behavior, confirms the flag happened; token is dead by GitHub's hand, not user error.
+- Third PAT supplied (created with the repo selected). Verified from sandbox: GET /user → 200 login TommLawrance (token authenticates). PUSH ATTEMPT #3: repo GET with token → 404; push → "Repository not found". Z.ai vantage re-check: user object → still "Not Found".
+- CONCLUSION (differential-diagnosis final): GitHub serves the account/repo 200 to the user's local/residential vantage but hides it from BOTH server-side datacenter vantages (sandbox + Z.ai infra) — IP-class-based treatment (datacenter IP reputation, plausibly triggered/worsened by today's repeated automated probing + failed pushes from this sandbox; possibly residual flag state on datacenter traffic). The token is valid; the push cannot succeed FROM THIS SANDBOX until the IP-class treatment clears. The user's machine — which sees everything — is the correct push origin. Local-agent handoff via bundle is the path.
+- VISIBILITY FIX for the bundle: root copy was invisible to the user because it was in .git/info/exclude (platform tree shows tracked + untracked-not-ignored files). Moved the bundle to download/ (platform's designated folder, its README.md is tracked) and added a second copy in public/ for direct browser download through the live domain (https://intentshield.space-z.ai/intentshield-backup.bundle — dev server serves public/ from disk, no restart needed). Neither copy is git-committed (no 2.8 MB binary in repo history); both appear as untracked-not-ignored → visible in the platform file tree. Stale exclude entry for the old root path removed. LESSON RECORDED: user-downloadable artifacts always go in download/, never excluded from visibility.
+- MODE-FLIP INCIDENT #2 (same as Task 20's local sibling): mid-session all 156 tracked files flipped 644→755. Verified mode-only (git diff --stat: 0 insertions, 0 deletions; grep "old mode": 156 files). Fixed with `git config core.fileMode false` (local config only). No commit ever contained the flipped modes — pushed history remains 644-clean. Platform FS quirk; expect recurrences; always check `git diff --stat` for 0/0 before trusting "M" flags.
+- Bundle REBUILT after this worklog commit so it contains the complete final state (chat message carries the authoritative SHA-256 — the worklog is inside the bundle, so its own hash cannot be embedded in itself).
+- Judges' app verified unaffected throughout: /api/health 200; bundle copies live in download/ and public/ only (no source changes this task).
+
+Stage Summary:
+- Push blocked from the sandbox by GitHub's IP-class treatment of datacenter ranges — NOT by the token (valid), NOT by repo settings (public, visible to the user's machine). The reliable path is the user's local agent pushing from their machine.
+- Deliverables: intentshield-backup.bundle (complete main history incl. this entry) at download/intentshield-backup.bundle (platform tree) AND public/intentshield-backup.bundle (direct URL via the live domain). SHA-256 + local-agent prompt delivered in chat.
+- Standing recommendations after their push lands: delete all three chat-pasted tokens, mint one fresh; tell the sandbox agent to fetch + re-sync origin/main afterwards.
+- Future pushes from this sandbox should be retried only after the IP-class treatment clears (test: token repo GET returning 200 from here, or user reporting time passed without automated probing).
